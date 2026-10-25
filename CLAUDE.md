@@ -1,11 +1,13 @@
 # homeOBD
 
 An OBD-style ("on-board diagnostics") web dashboard for apartment maintenance chores and
-cleaning schedules. Each chore behaves like a diagnostic code: it is OK, due soon, or
-overdue (the "check engine light"). Self-hosted on a Raspberry Pi; later phases add IoT
-sensors that can raise chores automatically.
+cleaning schedules, designed as a handheld scan tool ("APT-OBD"). Each chore is a diagnostic
+code (e.g. `K2002`) that goes PEND → CONF → PERM as it becomes due and overdue, and lights
+the CHK APT lamp. Self-hosted on a Raspberry Pi; later phases add IoT sensors that can raise
+chores automatically.
 
-See [docs/PLAN.md](docs/PLAN.md) for the roadmap and current milestone.
+- [docs/PLAN.md](docs/PLAN.md): roadmap, code/state rules, data model, API, current milestone.
+- [prototype/](prototype/README.md): the design reference. Match its look and behaviour.
 
 ## Repository
 

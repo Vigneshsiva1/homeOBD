@@ -2,24 +2,85 @@
 
 ## Goal
 
-A self-hosted, OBD-style dashboard for apartment chores, running on a Raspberry Pi 4 and
-reachable **only on the home network** (no public internet exposure). Phase 1 is a proof of
-concept with a handful of common household chores. Later phases add IoT sensors that feed the
-same dashboard.
+A self-hosted dashboard for apartment chores that looks and works like a handheld OBD scan
+tool ("APT-OBD"). It runs on a Raspberry Pi 4 and is reachable **only on the home network**
+(no public internet exposure). Phase 1 is a proof of concept with common household chores.
+Later phases add IoT sensors that feed the same dashboard.
 
-## The OBD metaphor
+The design reference is the prototype in [`prototype/`](../prototype/README.md);
+`prototype/template.html` holds its markup, screen logic and mock data.
 
-| Car OBD              | homeOBD                                                        |
-|----------------------|----------------------------------------------------------------|
-| Diagnostic code      | Chore code, e.g. `KIT-01` (Kitchen), `BTH-02` (Bathroom)        |
-| System OK            | Chore done within its interval                                 |
-| Pending code         | Due soon (e.g. within 20% of the interval or 1 day)            |
-| Check-engine light   | Overdue                                                        |
-| Clear codes          | "Mark done" resets the timer and logs a completion             |
-| Freeze-frame / log   | Completion history per chore                                   |
-| Live sensor data     | Phase 2: real sensor readings (humidity, leaks, temperature…)  |
+## The scan-tool UI (from the prototype)
 
-Status is always **computed** from `last_done_at + interval`, never stored, so it can't drift.
+A single device-shaped panel: header "APT-OBD · Maintenance scanner", a pixel-font screen
+with a title bar and a **CHK APT** warning lamp, a footer of key hints, and four buttons:
+**▲**, **▼**, **ENTER**, **EXIT**. Rows on the screen can also be tapped directly.
+
+Screen colour themes: **classic** (blue on light grey), **amber** (amber on black),
+**green** (LCD green). Fonts: **Chakra Petch** 500/600 for the device body and **VT323** for
+the screen.
+
+| Screen        | Shows / does                                                                                 |
+|---------------|----------------------------------------------------------------------------------------------|
+| Boot          | "Software v1.0 / Linking to unit APT-01" with a progress bar; ENTER skips.                   |
+| Diagnostic menu | The seven entries below; "Read codes" shows the active-code count.                       |
+| Read codes    | Active codes, worst first (PERM → CONF → PEND). ENTER → detail → "Mark done?" → cleared.     |
+| Code detail   | Zone, state, status ("Overdue 3 d" / "Due in 1 d"), interval, last done.                     |
+| Erase codes   | Snoozes every active code that is not PERM for 24 h. Health is unchanged: the chores still wait. |
+| Live data     | Health %, overdue codes, pending codes, lamp ON/OFF, streak, best streak, next service, tasks tracked. |
+| Freeze frame  | Per code: when it went overdue, health and streak at that moment, last done, interval.        |
+| Readiness     | Each zone RDY or INC, plus "N of 6 zones ready".                                             |
+| Service due   | Maintenance items (category 2) sorted by days left; overdue shows "OVR n d".                 |
+| Unit info     | Unit ID, software version, ECU (Raspberry Pi 4), interface (Web, Wi-Fi), zone and task counts. |
+
+Adding and editing chores needs text entry, which four buttons can't do well, so it goes on a
+separate plain **Setup page** (`/setup`). The theme is also chosen there.
+
+## Codes, zones and states
+
+**Code format:** zone letter + 4 digits, e.g. `K2002`.
+
+| Zone letter | Zone      |
+|-------------|-----------|
+| K           | Kitchen   |
+| B           | Bath      |
+| L           | Living    |
+| R           | Bedroom   |
+| U           | Utility   |
+| G           | Whole apt |
+
+**First digit = category** (like OBD's generic vs. manufacturer codes):
+
+| Digit | Category                                   | Typical interval |
+|-------|--------------------------------------------|------------------|
+| 0     | Routine cleaning                           | 1–7 days         |
+| 1     | Periodic / deep cleaning                   | 1–8 weeks        |
+| 2     | Maintenance & service (filters, safety…)   | 1–12 months      |
+| 3     | Sensor-raised (reserved for Phase 2)       | —                |
+
+The last three digits are a sequence number within the zone and category; gaps are fine.
+
+**States.** Computed on every request from `last_done_at + interval_days`, never stored, so
+they can't drift:
+
+| State | Meaning   | Rule (defaults, configurable)                                     |
+|-------|-----------|-------------------------------------------------------------------|
+| —     | OK        | Not due yet; not shown in Read codes.                             |
+| PEND  | Pending   | Due within `min(7 d, max(1 d, 15% of interval))`.                 |
+| CONF  | Confirmed | Overdue.                                                          |
+| PERM  | Permanent | Overdue by at least one full interval. Can't be erased.           |
+
+**Derived values**
+
+- **CHK APT lamp:** on while any CONF or PERM code is active and not snoozed.
+- **Health %:** share of tracked chores that are not overdue (CONF/PERM), counted whether or
+  not they are snoozed.
+- **Streak:** consecutive days that ended with zero overdue codes; **best streak** is the record.
+- **Readiness:** a zone is INC if it has any overdue or snoozed code, otherwise RDY.
+- **Erase codes:** sets `snoozed_until = now + 24 h` on active non-PERM codes. They return after
+  24 h if still not done. Marking a chore done clears its snooze.
+- **Freeze frame:** captured the moment a code first becomes CONF: timestamp, health and streak.
+  Cleared when the chore is marked done.
 
 ## Architecture (Phase 1)
 
@@ -30,114 +91,145 @@ Status is always **computed** from `last_done_at + interval`, never stored, so i
  ┌─────────────────────── Raspberry Pi ───────────────────────┐
  │ systemd: homeobd.service                                    │
  │   uvicorn → FastAPI app                                     │
- │     ├── /            static HTML/CSS/JS (from prototype)    │
- │     └── /api/...     JSON API                               │
+ │     ├── /            scan-tool UI (static HTML/CSS/JS)      │
+ │     ├── /setup       add / edit chores, choose theme        │
+ │     ├── /api/...     JSON API                               │
+ │     └── background tick (every 5 min): freeze frames,       │
+ │         daily health record for streaks                     │
  │   SQLite file: data/homeobd.db                              │
  └─────────────────────────────────────────────────────────────┘
 ```
 
 **Why this stack**
 
-- **Python + FastAPI**: light enough for a 1 GB Pi, and Python has the best Pi/IoT ecosystem
+- **Python + FastAPI:** light enough for a 1 GB Pi, and Python has the best Pi/IoT ecosystem
   for Phase 2 (`gpiozero`, `paho-mqtt`, sensor libraries).
-- **SQLite**: zero-ops, a single file, trivially backed up. Plenty for one household.
-- **Plain HTML/CSS/JS frontend** adapted from the existing HTML prototype: no build step, no
-  Node toolchain on the Pi. It fetches data from the API instead of hard-coding it.
-- **No Docker**: not worth the RAM/complexity for one service on a 1 GB board.
+- **SQLite:** zero-ops, a single file, trivially backed up. Plenty for one household.
+- **Plain HTML/CSS/JS frontend:** the prototype's screen logic is a small state machine
+  (`view()` in `template.html`), so it ports to vanilla JS without React or a build step.
+- **Self-hosted fonts:** the Chakra Petch and VT323 `.woff2` files packed in the prototype
+  export are extracted into `app/static/fonts/` with their OFL licence, so the UI works with no
+  internet connection.
+- **No Docker:** not worth the RAM and complexity for one service on a 1 GB board.
 
 **Network scope (LAN only)**
 
 - Bind to the Pi's LAN interface; reach it at `http://<hostname>.local:8000` (mDNS via
   `avahi-daemon`) or the Pi's IP. Give the Pi a DHCP reservation on the router.
-- No port forwarding, no TLS, no public DNS, no login for the POC: anyone on the home Wi-Fi
-  can use it. Optional hardening: a firewall rule allowing port 8000 only from the local
-  subnet (e.g. `192.168.1.0/24`).
+- No port forwarding, TLS, public DNS or login for the POC: anyone on the home Wi-Fi can use it.
+  Optional hardening: a firewall rule allowing port 8000 only from the local subnet.
+
+**Time zone:** the Pi's clock is currently UTC. Set it to the local zone (`dietpi-config` →
+Localisation, or `timedatectl set-timezone <Region/City>`) so "due today" and streak days
+roll over at local midnight.
 
 ## Data model (Phase 1)
 
 ```
-areas        (id, code, name)                       -- KIT, BTH, LIV, BED, GEN
-chores       (id, code, area_id, name, description,
-              interval_days, last_done_at, created_at,
-              trigger_type  DEFAULT 'schedule')     -- 'sensor' reserved for Phase 2
-completions  (id, chore_id, done_at, note)
+zones          (letter PK, name)                      -- K B L R U G
+chores         (id, code UNIQUE, zone, name, description,
+                interval_days, last_done_at, snoozed_until,
+                trigger_type DEFAULT 'schedule',      -- 'sensor' reserved for Phase 2
+                created_at)
+completions    (id, chore_id, done_at, note)
+freeze_frames  (id, chore_id, set_at, health_at_set, streak_at_set, cleared_at)
+daily_health   (date PK, health, overdue_count)       -- powers streak / best streak
+settings       (key PK, value)                        -- unit_id, theme, state thresholds
 ```
-
-`trigger_type` is added now so sensor-raised chores in Phase 2 don't need a schema rewrite.
 
 ## API (Phase 1)
 
-| Method | Path                           | Purpose                                   |
-|--------|--------------------------------|-------------------------------------------|
-| GET    | `/api/chores`                  | All chores with computed status + due date |
-| POST   | `/api/chores`                  | Add a chore                               |
-| PATCH  | `/api/chores/{id}`             | Edit name / interval / area               |
-| DELETE | `/api/chores/{id}`             | Remove a chore                            |
-| POST   | `/api/chores/{id}/complete`    | Mark done ("clear code"), logs completion |
-| GET    | `/api/chores/{id}/history`     | Completion log                            |
-| GET    | `/api/summary`                 | Counts by status + overall "health" score |
+| Method | Path                         | Purpose                                                |
+|--------|------------------------------|--------------------------------------------------------|
+| GET    | `/api/codes`                 | Active codes (PEND/CONF/PERM) with status text, worst first |
+| GET    | `/api/codes/{code}`          | One code's detail                                      |
+| POST   | `/api/codes/{code}/done`     | Mark done ("clear code"): logs completion, clears snooze and freeze frame |
+| POST   | `/api/codes/erase`           | Snooze active non-PERM codes for 24 h                  |
+| GET    | `/api/codes/{code}/freeze`   | Freeze frame for a code                                |
+| GET    | `/api/live`                  | Health, counts, lamp, streak, best streak, next service |
+| GET    | `/api/readiness`             | RDY/INC per zone                                       |
+| GET    | `/api/service`               | Category-2 items with days left                        |
+| GET    | `/api/unit`                  | Unit info                                              |
+| GET    | `/api/chores`                | All chores, including OK ones (Setup page)             |
+| POST   | `/api/chores`                | Add a chore                                            |
+| PATCH  | `/api/chores/{code}`         | Edit name / interval / zone                            |
+| DELETE | `/api/chores/{code}`         | Remove a chore                                         |
+| GET/PUT| `/api/settings`              | Theme, unit ID, thresholds                             |
 
-## Seed chores
+## Seed chores (18, matching the prototype's "Tasks tracked 18")
 
-| Code   | Chore                               | Interval |
-|--------|-------------------------------------|----------|
-| KIT-01 | Wipe counters & stovetop            | 2 days   |
-| KIT-02 | Take out trash & recycling          | 3 days   |
-| KIT-03 | Clean fridge, toss old food         | 30 days  |
-| KIT-04 | Clean dishwasher filter             | 30 days  |
-| KIT-05 | Degrease range-hood filter          | 90 days  |
-| BTH-01 | Clean toilet, sink & mirror         | 7 days   |
-| BTH-02 | Scrub shower / tub                  | 14 days  |
-| LIV-01 | Vacuum / mop floors                 | 7 days   |
-| LIV-02 | Dust surfaces                       | 14 days  |
-| BED-01 | Change bed sheets                   | 14 days  |
-| GEN-01 | Water plants                        | 4 days   |
-| GEN-02 | Replace HVAC / air-purifier filter  | 90 days  |
-| GEN-03 | Test smoke detector                 | 180 days |
+Codes marked ★ come straight from the prototype.
+
+| Code     | Chore                        | Interval |
+|----------|------------------------------|----------|
+| K0001 ★  | Wash dishes                  | 1 d      |
+| K0002    | Wipe counters & stovetop     | 2 d      |
+| K0003    | Take out trash & recycling   | 3 d      |
+| K1001    | Clean fridge interior        | 30 d     |
+| K2001    | Degrease range-hood filter   | 90 d     |
+| K2002 ★  | Clean fridge coils           | 180 d    |
+| K2003 ★  | Descale kettle               | 30 d     |
+| B0001    | Clean toilet & sink          | 7 d      |
+| B1004 ★  | Scrub shower                 | 14 d     |
+| B2001 ★  | Clean bath fan               | 60 d     |
+| L0002 ★  | Vacuum living room           | 7 d      |
+| L1001    | Dust surfaces                | 14 d     |
+| R0001    | Vacuum bedroom               | 7 d      |
+| R1001    | Change bed sheets            | 14 d     |
+| U1001    | Run washer cleaning cycle    | 30 d     |
+| U2001 ★  | Replace HVAC filter          | 90 d     |
+| G0001    | Water plants                 | 4 d      |
+| G2001 ★  | Test smoke alarms            | 180 d    |
 
 ## Milestones
 
-### M0 — Setup ✅ (this session)
-- Git installed on the Pi, repo cloned to `/root/homeOBD`, `CLAUDE.md` and this plan added.
-- Still needed from you: a git identity on the Pi, push credentials for GitHub (a fine-grained
-  personal access token or an SSH deploy key), and the HTML prototype file copied into the repo
-  (e.g. `prototype/index.html`).
+### M0 — Setup ✅
+- Git installed on the Pi and repo cloned to `/root/homeOBD`; repo-local git identity set.
+- GitHub deploy key (write access) at `~/.ssh/homeobd_github`; remote uses SSH.
+- SFTP enabled for Dropbear (`openssh-sftp-server`).
+- `CLAUDE.md`, this plan and the prototype added.
 
-### M1 — Backend skeleton
-- `app/` package: FastAPI app, SQLite schema + migrations-on-startup, seed data, the API above.
+### M1 — Backend
+- `app/` package: FastAPI app, SQLite schema created on startup, seed data, the API above.
+- State engine as plain functions (state, status text, health, streak, readiness), separate
+  from the web layer so it's easy to test and to reuse for sensor rules later.
+- Background tick for freeze frames and the daily health record.
 - Python venv in `.venv/`, `requirements.txt` (fastapi, uvicorn).
-- `pytest` tests for status computation (OK / due soon / overdue edge cases) and the API.
-- **Done when:** `curl localhost:8000/api/chores` returns the seeded chores with statuses.
+- `pytest` tests: state boundaries (PEND/CONF/PERM edges), erase/snooze expiry, health,
+  streaks, freeze-frame capture and clearing, API happy paths.
+- **Done when:** `curl localhost:8000/api/codes` returns seeded codes with correct states.
 
-### M2 — Dashboard frontend
-- Port the prototype HTML into `app/static/`, replace hard-coded data with `fetch('/api/...')`.
-- Cards per chore with code, status light, "due in / overdue by", and a **Mark done** button.
-- Add/edit chore form; filter by area or status; overall health gauge.
-- Mobile-first layout (it will mostly be used from a phone).
-- **Done when:** you can mark a chore done from your phone and see it turn green.
+### M2 — Scan-tool frontend
+- Recreate `prototype/template.html` in `app/static/`: the same layout, the three themes, all
+  ten screens, ▲/▼/ENTER/EXIT and tap-to-select rows. Mock data replaced by `fetch('/api/...')`.
+- Keyboard support: arrow keys, Enter, Escape.
+- Fonts extracted from the export into `app/static/fonts/` with the OFL licence.
+- `/setup` page: list, add, edit, delete chores; theme picker.
+- **Done when:** from your phone you can read codes, mark one done and see the CHK APT lamp go out.
 
 ### M3 — Run it on the Pi for real
-- `deploy/homeobd.service` systemd unit (auto-start on boot, restart on crash).
+- Set the Pi's time zone.
+- `deploy/homeobd.service` systemd unit (start on boot, restart on crash).
 - `avahi-daemon` so `http://<hostname>.local:8000` works; DHCP reservation on the router.
-- Nightly SQLite backup (`sqlite3 .backup` via cron/systemd timer, keep the last 14).
+- Nightly SQLite backup (`sqlite3 .backup` from a systemd timer, keep the last 14).
 - **Done when:** the Pi reboots and the dashboard comes back on its own.
 
 ### M4 — POC polish (optional)
-- PWA manifest + icon so it can be "installed" to the phone home screen.
-- Completion history view; simple streaks / stats.
-- Optional LAN notifications for overdue chores (e.g. self-hosted `ntfy` on the Pi).
+- PWA manifest and icon so it can be added to the phone home screen.
+- Completion history per code.
+- LAN notifications for new CONF/PERM codes (e.g. self-hosted `ntfy` on the Pi).
 
-## Phase 2 — IoT (later, design-only for now)
+## Phase 2 — IoT (later, design only for now)
 
 - **Message bus:** Mosquitto MQTT broker on the Pi (LAN only). Sensors publish to
-  `homeobd/<area>/<sensor>/<metric>`.
-- **Sensors:** ESP32 / ESP8266 boards (ESPHome or MicroPython) or GPIO sensors on the Pi:
-  temperature/humidity (bathroom mould risk), water-leak (under sink), door contact (fridge
-  left open), power monitoring (dryer/dishwasher cycles), air quality.
-- **Ingest service:** a small Python MQTT subscriber that stores readings in a `readings` table
-  and evaluates rules, e.g. "bathroom humidity > 70% for 2 h → raise `BTH-03` Ventilate".
-  Rule-raised chores use `trigger_type = 'sensor'`.
-- **Dashboard:** a "live data" panel per area, mirroring OBD live PIDs.
+  `homeobd/<zone>/<sensor>/<metric>`.
+- **Sensors:** ESP32/ESP8266 boards (ESPHome or MicroPython) or GPIO sensors on the Pi:
+  temperature/humidity (bathroom mould risk), water leak (under the sink), door contact
+  (fridge left open), power monitoring (appliance cycles), air quality.
+- **Ingest service:** a small Python MQTT subscriber stores readings in a `readings` table and
+  evaluates rules, e.g. "bathroom humidity > 70% for 2 h → raise `B3001` Ventilate bathroom".
+  Sensor-raised chores use category 3 and `trigger_type = 'sensor'`.
+- **Live data screen:** gains real sensor values, like OBD live PIDs.
 - Revisit storage if reading volume grows (SQLite with retention first; a time-series DB only
   if needed).
 
