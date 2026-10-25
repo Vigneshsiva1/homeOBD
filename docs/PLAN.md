@@ -60,15 +60,15 @@ separate plain **Setup page** (`/setup`). The theme is also chosen there.
 
 The last three digits are a sequence number within the zone and category; gaps are fine.
 
-**States.** Computed on every request from `last_done_at + interval_days`, never stored, so
-they can't drift:
+**States.** Computed on every request from `last_done_at + interval_days` (in local calendar
+days), never stored, so they can't drift:
 
-| State | Meaning   | Rule (defaults, configurable)                                     |
+| State | Meaning   | Rule (constants in `app/engine.py`)                               |
 |-------|-----------|-------------------------------------------------------------------|
 | —     | OK        | Not due yet; not shown in Read codes.                             |
-| PEND  | Pending   | Due within `min(7 d, max(1 d, 15% of interval))`.                 |
+| PEND  | Pending   | Days left < `min(7, max(1, ⌊15% of interval⌋))`; always on the due day. |
 | CONF  | Confirmed | Overdue.                                                          |
-| PERM  | Permanent | Overdue by at least one full interval. Can't be erased.           |
+| PERM  | Permanent | Overdue by at least `max(interval, 7)` days. Can't be erased.     |
 
 **Derived values**
 
@@ -79,8 +79,8 @@ they can't drift:
 - **Readiness:** a zone is INC if it has any overdue or snoozed code, otherwise RDY.
 - **Erase codes:** sets `snoozed_until = now + 24 h` on active non-PERM codes. They return after
   24 h if still not done. Marking a chore done clears its snooze.
-- **Freeze frame:** captured the moment a code first becomes CONF: timestamp, health and streak.
-  Cleared when the chore is marked done.
+- **Freeze frame:** captured when a code is first seen overdue: date, health at that moment and
+  the streak it broke (the run up to yesterday). Cleared when the chore is marked done.
 
 ## Architecture (Phase 1)
 
@@ -126,7 +126,6 @@ roll over at local midnight.
 ## Data model (Phase 1)
 
 ```
-zones          (letter PK, name)                      -- K B L R U G
 chores         (id, code UNIQUE, zone, name, description,
                 interval_days, last_done_at, snoozed_until,
                 trigger_type DEFAULT 'schedule',      -- 'sensor' reserved for Phase 2
@@ -134,8 +133,11 @@ chores         (id, code UNIQUE, zone, name, description,
 completions    (id, chore_id, done_at, note)
 freeze_frames  (id, chore_id, set_at, health_at_set, streak_at_set, cleared_at)
 daily_health   (date PK, health, overdue_count)       -- powers streak / best streak
-settings       (key PK, value)                        -- unit_id, theme, state thresholds
+settings       (key PK, value)                        -- unit_id, theme
 ```
+
+Zones are fixed (`engine.ZONES`) and a chore's zone is the first letter of its code, so there is
+no zones table.
 
 ## API (Phase 1)
 
@@ -151,10 +153,10 @@ settings       (key PK, value)                        -- unit_id, theme, state t
 | GET    | `/api/service`               | Category-2 items with days left                        |
 | GET    | `/api/unit`                  | Unit info                                              |
 | GET    | `/api/chores`                | All chores, including OK ones (Setup page)             |
-| POST   | `/api/chores`                | Add a chore                                            |
+| POST   | `/api/chores`                | Add a chore: give a `code`, or a `zone` + `category` to get the next free code |
 | PATCH  | `/api/chores/{code}`         | Edit name / interval / zone                            |
 | DELETE | `/api/chores/{code}`         | Remove a chore                                         |
-| GET/PUT| `/api/settings`              | Theme, unit ID, thresholds                             |
+| GET/PUT| `/api/settings`              | Theme, unit ID                                         |
 
 ## Seed chores (18, matching the prototype's "Tasks tracked 18")
 
@@ -189,7 +191,7 @@ Codes marked ★ come straight from the prototype.
 - SFTP enabled for Dropbear (`openssh-sftp-server`).
 - `CLAUDE.md`, this plan and the prototype added.
 
-### M1 — Backend
+### M1 — Backend ✅
 - `app/` package: FastAPI app, SQLite schema created on startup, seed data, the API above.
 - State engine as plain functions (state, status text, health, streak, readiness), separate
   from the web layer so it's easy to test and to reuse for sensor rules later.
@@ -198,6 +200,17 @@ Codes marked ★ come straight from the prototype.
 - `pytest` tests: state boundaries (PEND/CONF/PERM edges), erase/snooze expiry, health,
   streaks, freeze-frame capture and clearing, API happy paths.
 - **Done when:** `curl localhost:8000/api/codes` returns seeded codes with correct states.
+
+Run locally:
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python -m pytest -q
+.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000   # API docs at /docs
+```
+
+The database lives in `data/homeobd.db` (override with `HOMEOBD_DB`) and is created and seeded on
+first start.
 
 ### M2 — Scan-tool frontend
 - Recreate `prototype/template.html` in `app/static/`: the same layout, the three themes, all
