@@ -22,6 +22,10 @@ piece of work.
   Chrome or Safari. Check layouts at that size first; desktop is secondary.
 - The scanner fills the whole phone screen. Every screen is the same size; long content
   scrolls inside the screen, never the page.
+- Full height comes from `fitScreen()` in `scantool.js` setting `--app-height` on `<html>`:
+  iOS home-screen apps with a see-through status bar report a viewport one status bar too short
+  and only draw as far as the document reaches. Don't replace it with `100vh`, `100dvh` or a
+  `position: fixed` layer; each of those left a gap or cropped the bottom on the iPhone.
 - Touch-only: no up/down/ENTER/EXIT buttons. Tap rows to open them. Keyboard shortcuts may stay
   for desktop but must never be the only way to do something.
 - Follow iOS conventions: `‹ Back` with a chevron icon at the left of the title bar, tap

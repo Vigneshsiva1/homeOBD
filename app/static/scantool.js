@@ -1,6 +1,19 @@
 // Scan-tool UI: the screen state machine from prototype/template.html, fed by /api.
 'use strict';
 
+// iOS home-screen apps with a see-through status bar report a viewport one status bar shorter
+// than the screen, leaving a gap at the bottom. There the app owns the whole screen, so take the
+// height from the screen itself (in portrait); everywhere else the window height is right.
+function fitScreen() {
+  const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+  const portrait = matchMedia('(orientation: portrait)').matches;
+  const h = standalone && portrait ? Math.max(screen.height, window.innerHeight) : window.innerHeight;
+  document.documentElement.style.setProperty('--app-height', h + 'px');
+}
+fitScreen();
+window.addEventListener('resize', fitScreen);
+window.addEventListener('orientationchange', fitScreen);
+
 const MENU = [
   ['Read codes', 'codes'],
   ['Erase codes', 'erase'],

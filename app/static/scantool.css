@@ -1,17 +1,18 @@
 /* Scan-tool page. Colours and fonts follow prototype/template.html; layout and controls follow
    iOS conventions: the device fills the whole phone screen, and every screen is the same size.
    Everything uses the app's own fonts: VT323 on the screen, Chakra Petch on the device. */
-/* Quick repeated taps on the screen must not trigger iOS double-tap zoom; pinch zoom still works. */
-html { touch-action: manipulation; height: 100%; }
+/* touch-action: quick repeated taps must not trigger iOS double-tap zoom (pinch zoom still works).
+   height: the document itself is the full screen height. --app-height comes from fitScreen() in
+   scantool.js, which works around iOS reporting a viewport one status bar too short in
+   home-screen apps (iOS only draws as far as the document reaches). */
+html { touch-action: manipulation; height: var(--app-height, 100%); background: #121315; }
 body { margin: 0; height: 100%; overflow: hidden; background: #121315; }
 a { color: #f2a33a; }
 
 /* Full-height column. With viewport-fit=cover the page runs under the status bar and home
    indicator, so the padding adds the safe-area insets. */
 main {
-  /* Pinned to the screen edges: more reliable than 100vh/100dvh in an iOS home-screen app. */
-  position: fixed;
-  inset: 0;
+  height: 100%;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
