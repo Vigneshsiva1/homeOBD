@@ -12,6 +12,7 @@
   --danger: #ff7a6b;
 }
 * { box-sizing: border-box; }
+html { touch-action: manipulation; } /* no iOS double-tap zoom; pinch zoom still works */
 body {
   margin: 0;
   background: var(--bg);

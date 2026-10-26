@@ -23,16 +23,17 @@ the screen.
 | Screen        | Shows / does                                                                                 |
 |---------------|----------------------------------------------------------------------------------------------|
 | Boot          | "Software v1.0 / Linking to unit APT-01" with a progress bar; ENTER skips.                   |
-| Diagnostic menu | The seven entries below; "Read codes" shows the active-code count.                       |
+| Diagnostic menu | The eight entries below; "Read codes" shows the active-code count.                       |
 | Read codes    | Active codes, worst first (PERM → CONF → PEND). ENTER → detail → "Mark done?" → cleared.     |
 | Code detail   | Zone, state, status ("Overdue 3 d" / "Due in 1 d"), interval, last done; rows **Mark done** and **Help**. |
-| Help          | The chore's steps, then **DONE WHEN** (what finished looks like). The "Mark done?" screen repeats DONE WHEN. |
+| Code help     | From a code's detail: the chore's steps, then **DONE WHEN** (what finished looks like). The "Mark done?" screen repeats DONE WHEN. |
 | Erase codes   | Snoozes every active code that is not PERM for 24 h. Health is unchanged: the chores still wait. |
 | Live data     | Health %, overdue codes, pending codes, lamp ON/OFF, streak, best streak, next service, tasks tracked. |
 | Freeze frame  | Per code: when it went overdue, health and streak at that moment, last done, interval.        |
 | Readiness     | Each zone RDY or INC, plus "N of 6 zones ready".                                             |
 | Service due   | Maintenance items (category 2) sorted by days left; overdue shows "OVR n d".                 |
 | Unit info     | Unit ID, software version, ECU (Raspberry Pi 4), interface (Web, Wi-Fi), zone and task counts. |
+| Help          | Every chore (due or not) with its interval; ENTER shows its steps and DONE WHEN. |
 
 Adding and editing chores needs text entry, which four buttons can't do well, so it goes on a
 separate plain **Setup page** (`/setup`). The theme is also chosen there.

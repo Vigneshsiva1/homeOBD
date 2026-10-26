@@ -1,4 +1,6 @@
 /* Scan-tool page. Measurements and colours follow prototype/template.html. */
+/* Quick repeated taps on the keys must not trigger iOS double-tap zoom; pinch zoom still works. */
+html { touch-action: manipulation; }
 body { margin: 0; background: #121315; }
 a { color: #f2a33a; }
 a:hover { color: #ffc46e; }
@@ -97,6 +99,9 @@ main {
   line-height: 1.15;
   text-align: left;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .row.sel { background: var(--sel-bg); color: var(--sel-ink); }
 
@@ -112,6 +117,9 @@ main {
   letter-spacing: 0.12em;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none; /* no copy/lookup menu on long press */
 }
 .key:active { filter: brightness(1.2); }
 .key-arrow { display: flex; align-items: center; justify-content: center; }

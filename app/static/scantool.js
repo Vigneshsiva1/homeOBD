@@ -9,10 +9,11 @@ const MENU = [
   ['Readiness', 'ready'],
   ['Service due', 'service'],
   ['Unit info', 'info'],
+  ['Help', 'manual'],
 ];
 const BACK = {
   codes: 'menu', erase: 'menu', live: 'menu', freezeList: 'menu', ready: 'menu', service: 'menu',
-  info: 'menu', detail: 'codes', confirm: 'detail', help: 'detail', freeze: 'freezeList',
+  info: 'menu', manual: 'menu', detail: 'codes', confirm: 'detail', freeze: 'freezeList',
 };
 const DETAIL_ROWS = ['Mark done', 'Help'];
 const FULL = { PERM: 'Permanent', CONF: 'Confirmed', PEND: 'Pending' };
@@ -24,12 +25,13 @@ const REFRESH_MS = 60000;
 // UI state. `idx` holds the cursor for each list screen.
 const s = {
   screen: 'boot', progress: 0, booted: false, bootError: false, skip: false,
-  idx: { menu: 0, codes: 0, freezeList: 0, detail: 0 },
+  idx: { menu: 0, codes: 0, freezeList: 0, detail: 0, manual: 0 },
   sel: null, msg: null, busy: false,
+  helpRet: 'detail', // where EXIT goes from a chore's help: its code detail or the Help list
 };
 // Last data read from the unit.
 const data = {
-  codes: [], lamp: false, theme: 'classic',
+  codes: [], chores: [], lamp: false, theme: 'classic',
   unit: null, live: null, ready: null, service: null, freeze: null,
 };
 
@@ -57,6 +59,7 @@ const LOADERS = {
   ready: async () => { data.ready = await api('/readiness'); },
   service: async () => { data.service = await api('/service'); },
   info: async () => { data.unit = await api('/unit'); },
+  manual: async () => { data.chores = (await api('/chores')).chores; },
   freeze: async () => {
     data.freeze = null; // never show the previous code's frame
     data.freeze = await api('/codes/' + encodeURIComponent(s.sel) + '/freeze');
@@ -132,13 +135,19 @@ function selected() {
   return data.codes.find(c => c.code === s.sel);
 }
 
+// Any chore, due or not: the Help list reads all chores, code detail only the active ones.
+function chore(code) {
+  return data.chores.find(c => c.code === code) || data.codes.find(c => c.code === code);
+}
+
 function erasable() {
   return data.codes.filter(c => c.state !== 'PERM');
 }
 
 function move(d) {
   if (!(s.screen in s.idx)) return;
-  const n = { menu: MENU.length, detail: DETAIL_ROWS.length }[s.screen] ?? data.codes.length;
+  const n = { menu: MENU.length, detail: DETAIL_ROWS.length, manual: data.chores.length }[s.screen]
+    ?? data.codes.length;
   if (!n) return;
   s.idx[s.screen] = (s.idx[s.screen] + d + n) % n;
   render();
@@ -166,9 +175,17 @@ function enter() {
     }
     case 'detail':
       if (!selected()) return go('codes');
+      s.helpRet = 'detail';
       return go(s.idx.detail === 0 ? 'confirm' : 'help');
+    case 'manual': {
+      const c = data.chores[s.idx.manual];
+      if (!c) return;
+      s.sel = c.code;
+      s.helpRet = 'manual';
+      return go('help');
+    }
     case 'help':
-      return go('detail');
+      return go(s.helpRet);
     case 'confirm':
       return busy(markDone);
     case 'msg':
@@ -181,6 +198,7 @@ function enter() {
 function exit() {
   if (s.busy) return;
   if (s.screen === 'msg') return go(s.msg.ret);
+  if (s.screen === 'help') return go(s.helpRet);
   if (s.screen === 'boot') {
     s.skip = true;
     return finishBoot();
@@ -299,16 +317,26 @@ function view() {
       v.foot = '▲▼ move  ENTER select  EXIT back';
       break;
     }
+    case 'manual':
+      v.title = 'Help';
+      if (!data.chores.length) v.lines = ['Reading...'];
+      else {
+        v.rows = data.chores.map((c, i) => ({
+          label: c.code + ' ' + c.name, tag: days(c.interval_days), sel: i === s.idx.manual, i,
+        }));
+        v.foot = MOVE_FOOT;
+      }
+      break;
     case 'help': {
-      const c = selected();
+      const c = chore(s.sel);
       v.title = 'Help ' + s.sel;
       if (!c || !(c.how_to || c.done_when)) {
         v.lines = ['No help yet.', 'Add it on the Setup page.'];
         break;
       }
-      v.lines = textLines(c.how_to);
+      v.lines = [c.name, SPACER, ...textLines(c.how_to)];
       if (c.done_when) {
-        if (v.lines.length) v.lines.push(SPACER);
+        if (c.how_to) v.lines.push(SPACER);
         v.lines.push('DONE WHEN', ...textLines(c.done_when));
       }
       v.foot = 'ENTER or EXIT back';
