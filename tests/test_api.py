@@ -206,3 +206,18 @@ def test_editing_last_done_closes_freeze_frame(client):
     assert client.get("/api/codes/K0001/freeze").json()["frame"] is not None
     client.patch("/api/chores/K0001", json={"last_done": date.today().isoformat()})
     assert client.get("/api/codes/K0001/freeze").json()["frame"] is None
+
+
+def test_home_screen_app_files(client):
+    m = client.get("/manifest.webmanifest")
+    assert m.headers["content-type"].startswith("application/manifest+json")
+    assert (m.json()["display"], m.json()["start_url"]) == ("standalone", "/")
+    for icon in m.json()["icons"]:
+        assert client.get(icon["src"]).content[:8] == b"\x89PNG\r\n\x1a\n"
+    sw = client.get("/sw.js")
+    assert sw.headers["content-type"].startswith("text/javascript")
+    assert sw.headers["cache-control"] == "no-cache"
+    assert "/api/" in sw.text  # API requests bypass the cache
+    page = client.get("/").text
+    assert 'rel="manifest"' in page and 'rel="apple-touch-icon"' in page
+    assert client.get("/static/icons/apple-touch-icon.png").status_code == 200

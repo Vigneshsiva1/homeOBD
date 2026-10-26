@@ -63,6 +63,17 @@ def create_app(db_path: str | Path | None = None, tick: bool = True) -> FastAPI:
     def setup():
         return FileResponse(STATIC / "setup.html")
 
+    # The manifest and service worker live at the root so their scope covers the whole app.
+    @app.get("/manifest.webmanifest", include_in_schema=False)
+    def manifest():
+        return FileResponse(STATIC / "manifest.webmanifest", media_type="application/manifest+json")
+
+    @app.get("/sw.js", include_in_schema=False)
+    def service_worker():
+        return FileResponse(
+            STATIC / "sw.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"}
+        )
+
     return app
 
 

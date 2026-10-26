@@ -477,3 +477,8 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) refr
 setInterval(refresh, REFRESH_MS);
 
 boot();
+
+// Offline app shell for the home-screen app; browsers only allow this over HTTPS.
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}

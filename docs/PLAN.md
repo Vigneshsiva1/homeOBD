@@ -115,6 +115,7 @@ days), never stored, so they can't drift:
 
 **Network scope (LAN only)**
 
+- Also on the tailnet over HTTPS via `tailscale serve` (see M5); never Funnel.
 - Bind to the Pi's LAN interface; reach it at `http://<hostname>.local:8000` (mDNS via
   `avahi-daemon`, i.e. `http://photostorage.local:8000`) or the Pi's IP. Give the Pi a DHCP reservation on the router.
 - No port forwarding, TLS, public DNS or login for the POC: anyone on the home Wi-Fi can use it.
@@ -263,7 +264,11 @@ To restore: `systemctl stop homeobd`, copy a backup over `data/homeobd.db` (and 
 - Fix: editing a chore's last-done date closes its open freeze frame.
 
 ### M5 — Next app features (picked 2026-10-26)
-- Phone home-screen app (PWA manifest and icon).
+- Phone home-screen app: manifest (`/manifest.webmanifest`), icons in `app/static/icons/`,
+  iPhone tags, and a network-first service worker (`/sw.js`) that keeps the app shell available
+  when the Pi is unreachable (API calls are never cached). Served over HTTPS on the tailnet with
+  `tailscale serve` → `https://photostorage.tail82999e.ts.net` (no Funnel). Add it from Chrome or
+  Safari: Share → Add to Home Screen.
 - Completion history per code.
 - Phone alerts for new overdue codes via ntfy, on the same topic as the homeserver.
 - Seasonal intervals (e.g. plants and fertilizing less often in winter).

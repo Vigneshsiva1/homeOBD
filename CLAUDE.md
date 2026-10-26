@@ -30,5 +30,10 @@ chores automatically.
   needs a compile step on the Pi. Prefer plain HTML/CSS/JS served by the backend.
 - Python 3.13 and Node 26 are installed; the backend is Python (see PLAN.md).
 - The app runs as a systemd service so it survives reboots.
-- **LAN only.** The app is used only on the home network: no port forwarding, public DNS,
-  TLS certificates or tunnels. Don't add internet-facing features unless asked.
+- **Private only: home network + the user's tailnet.** Plain HTTP on the LAN
+  (`http://192.168.0.157:8000`) and HTTPS through `tailscale serve` on the tailnet
+  (`https://photostorage.tail82999e.ts.net`). Never Tailscale Funnel, port forwarding, public
+  DNS or anything else that reaches the public internet. Don't add internet-facing features
+  unless asked.
+- This Claude Code session reaches the Pi over Tailscale: never stop, remove or reconfigure
+  Tailscale in a way that could drop the connection.

@@ -196,3 +196,8 @@ async function init() {
 }
 
 init().catch(err => flash('chore-msg', 'Could not reach the unit: ' + err.message, true));
+
+// Offline app shell for the home-screen app; browsers only allow this over HTTPS.
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
