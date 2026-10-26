@@ -136,3 +136,31 @@ def test_settings(client):
     assert client.get("/api/settings").json() == {"unit_id": "APT-01", "theme": "classic"}
     assert client.put("/api/settings", json={"theme": "amber"}).json()["theme"] == "amber"
     assert client.put("/api/settings", json={"theme": "pink"}).status_code == 422
+
+
+def test_meta(client):
+    m = client.get("/api/meta").json()
+    assert [z["zone"] for z in m["zones"]] == ["K", "B", "L", "R", "U", "G"]
+    assert [c["category"] for c in m["categories"]] == [0, 1, 2, 3]
+    assert m["themes"] == ["classic", "amber", "green"]
+
+
+@pytest.mark.parametrize(
+    "path, marker",
+    [
+        ("/", 'id="screen"'),
+        ("/setup", 'id="chore-form"'),
+        ("/static/scantool.js", "function view()"),
+        ("/static/setup.js", "async function loadChores()"),
+    ],
+)
+def test_pages_are_served(client, path, marker):
+    r = client.get(path)
+    assert r.status_code == 200
+    assert marker in r.text
+
+
+def test_fonts_are_served(client):
+    r = client.get("/static/fonts/vt323-400-latin.woff2")
+    assert r.status_code == 200
+    assert r.content[:4] == b"wOF2"

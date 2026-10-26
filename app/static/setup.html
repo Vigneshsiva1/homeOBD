@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#121315">
+<title>APT-OBD Setup</title>
+<link rel="stylesheet" href="/static/fonts.css">
+<link rel="stylesheet" href="/static/setup.css">
+</head>
+<body>
+<main>
+  <header class="top">
+    <h1>APT-OBD <span>Setup</span></h1>
+    <a href="/">Back to scanner</a>
+  </header>
+
+  <section class="card">
+    <h2>Scanner</h2>
+    <form id="settings-form" class="grid">
+      <label>Screen theme
+        <select id="theme"></select>
+      </label>
+      <label>Unit ID
+        <input id="unit-id" required maxlength="12">
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn primary">Save</button>
+        <span id="settings-msg" class="msg" role="status"></span>
+      </div>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2 id="form-title">Add chore</h2>
+    <form id="chore-form" class="grid">
+      <label>Zone
+        <select id="zone"></select>
+      </label>
+      <label>Type
+        <select id="category"></select>
+      </label>
+      <label class="wide">Name
+        <input id="name" required maxlength="60" placeholder="e.g. Clean oven">
+      </label>
+      <label>Every (days)
+        <input id="interval" type="number" required min="1" max="3650" inputmode="numeric">
+      </label>
+      <label>Last done <small>(blank = today)</small>
+        <input id="last-done" type="date">
+      </label>
+      <label class="wide">Notes <small>(optional)</small>
+        <textarea id="description" maxlength="500" rows="2"></textarea>
+      </label>
+      <div class="form-actions">
+        <button type="submit" id="save-chore" class="btn primary">Add chore</button>
+        <button type="button" id="cancel-edit" class="btn" hidden>Cancel</button>
+        <span id="chore-msg" class="msg" role="status"></span>
+      </div>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Chores <span id="chore-count" class="count"></span></h2>
+    <div id="chore-list"></div>
+  </section>
+</main>
+<script src="/static/setup.js"></script>
+</body>
+</html>

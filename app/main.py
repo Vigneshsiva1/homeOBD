@@ -7,12 +7,15 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from . import __version__, db, service
 from .api import router
 
 log = logging.getLogger("homeobd")
 
+STATIC = Path(__file__).resolve().parent / "static"
 DEFAULT_DB = Path(__file__).resolve().parent.parent / "data" / "homeobd.db"
 TICK_SECONDS = 300
 
@@ -50,6 +53,16 @@ def create_app(db_path: str | Path | None = None, tick: bool = True) -> FastAPI:
     app = FastAPI(title="homeOBD", version=__version__, lifespan=lifespan)
     app.state.db_path = path
     app.include_router(router)
+    app.mount("/static", StaticFiles(directory=STATIC), name="static")
+
+    @app.get("/", include_in_schema=False)
+    def scan_tool():
+        return FileResponse(STATIC / "index.html")
+
+    @app.get("/setup", include_in_schema=False)
+    def setup():
+        return FileResponse(STATIC / "setup.html")
+
     return app
 
 

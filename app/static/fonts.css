@@ -1,0 +1,22 @@
+/* Self-hosted latin subsets; see fonts/LICENSE.txt. */
+@font-face {
+  font-family: 'Chakra Petch';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('fonts/chakra-petch-500-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Chakra Petch';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('fonts/chakra-petch-600-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'VT323';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('fonts/vt323-400-latin.woff2') format('woff2');
+}

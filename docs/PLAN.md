@@ -157,6 +157,7 @@ no zones table.
 | PATCH  | `/api/chores/{code}`         | Edit name / interval / zone                            |
 | DELETE | `/api/chores/{code}`         | Remove a chore                                         |
 | GET/PUT| `/api/settings`              | Theme, unit ID                                         |
+| GET    | `/api/meta`                  | Zones, categories and themes (feeds the Setup page's menus) |
 
 ## Seed chores (18, matching the prototype's "Tasks tracked 18")
 
@@ -212,13 +213,17 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 The database lives in `data/homeobd.db` (override with `HOMEOBD_DB`) and is created and seeded on
 first start.
 
-### M2 — Scan-tool frontend
+### M2 — Scan-tool frontend ✅
 - Recreate `prototype/template.html` in `app/static/`: the same layout, the three themes, all
   ten screens, ▲/▼/ENTER/EXIT and tap-to-select rows. Mock data replaced by `fetch('/api/...')`.
 - Keyboard support: arrow keys, Enter, Escape.
 - Fonts extracted from the export into `app/static/fonts/` with the OFL licence.
 - `/setup` page: list, add, edit, delete chores; theme picker.
 - **Done when:** from your phone you can read codes, mark one done and see the CHK APT lamp go out.
+
+Files: `app/static/index.html` + `scantool.js` + `scantool.css` (scanner, served at `/`),
+`setup.html` + `setup.js` + `setup.css` (served at `/setup`), `fonts.css` + `fonts/`. The
+scanner re-reads its data every 60 s and whenever the tab becomes visible again.
 
 ### M3 — Run it on the Pi for real
 - Set the Pi's time zone.

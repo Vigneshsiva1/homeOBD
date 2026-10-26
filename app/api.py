@@ -169,6 +169,15 @@ def unit_info(conn: sqlite3.Connection = Conn):
 # --- Setup page ----------------------------------------------------------------------------
 
 
+@router.get("/meta")
+def meta():
+    return {
+        "zones": [{"zone": z, "name": n} for z, n in engine.ZONES.items()],
+        "categories": [{"category": k, "name": n} for k, n in engine.CATEGORIES.items()],
+        "themes": list(THEMES),
+    }
+
+
 @router.get("/chores")
 def list_chores(conn: sqlite3.Connection = Conn):
     return {"chores": [code_json(c) for c in service.load_codes(conn, service.now())]}

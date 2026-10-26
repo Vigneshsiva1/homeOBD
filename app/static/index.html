@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#121315">
+<title>APT-OBD</title>
+<link rel="stylesheet" href="/static/fonts.css">
+<link rel="stylesheet" href="/static/scantool.css">
+</head>
+<body>
+<main>
+  <div class="device-wrap">
+    <div class="cable" aria-hidden="true"></div>
+    <div class="plug" aria-hidden="true"></div>
+    <section class="device" aria-label="Apartment scan tool">
+      <div class="brand">
+        <span class="brand-name">APT-OBD</span>
+        <span class="brand-sub">Maintenance scanner</span>
+      </div>
+      <div class="bezel">
+        <div id="screen" class="screen theme-classic" role="region" aria-live="polite" aria-label="Scanner screen">
+          <div class="screen-head">
+            <span id="title" class="clip"></span>
+            <span id="lamp" class="lamp" hidden>CHK APT</span>
+          </div>
+          <div id="body" class="screen-body"></div>
+          <div id="foot" class="screen-foot"></div>
+        </div>
+      </div>
+      <div class="keys">
+        <button type="button" id="key-up" class="key key-arrow" aria-label="Up">
+          <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>
+        </button>
+        <button type="button" id="key-enter" class="key key-enter">ENTER</button>
+        <button type="button" id="key-down" class="key key-arrow" aria-label="Down">
+          <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <button type="button" id="key-exit" class="key key-exit">EXIT</button>
+      </div>
+    </section>
+    <a class="setup-link" href="/setup">Setup</a>
+  </div>
+</main>
+<script src="/static/scantool.js"></script>
+</body>
+</html>
