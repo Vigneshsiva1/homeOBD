@@ -16,6 +16,8 @@ window.addEventListener('resize', fitScreen);
 // the panel, and long screens turn page by page with buttons instead of scrolling (see turnPage).
 const PANEL = new URLSearchParams(location.search).has('panel');
 if (PANEL) document.documentElement.classList.add('panel');
+// ?dim=60 darkens the panel's colours to 60 % (its backlight can't be dimmed); see dimColours.
+const PANEL_DIM = PANEL ? Number(new URLSearchParams(location.search).get('dim')) : 0;
 window.addEventListener('orientationchange', fitScreen);
 
 const MENU = [
@@ -176,6 +178,7 @@ const s = {
   helpRet: 'detail', // where EXIT goes from a chore's help: its code detail or the Help list
   rendered: null, // screen drawn last, so the panel knows when a new screen opens
   drawn: null, // the panel's last drawn view, as JSON, to skip identical redraws
+  dimmed: null, // theme whose colours the panel last darkened
 };
 // Last data read from the unit.
 const data = {
@@ -644,6 +647,7 @@ function render() {
   const v = view();
   if (PANEL) s.drawn = JSON.stringify(v);
   $('screen').className = 'screen theme-' + data.theme;
+  if (PANEL_DIM > 0 && PANEL_DIM < 100 && s.dimmed !== data.theme) dimColours();
   $('title').textContent = v.title;
   $('lamp').hidden = !data.lamp;
   $('back').hidden = !(BACK[s.screen] || s.screen === 'help');
@@ -706,6 +710,23 @@ function render() {
   } else if (sel) {
     sel.scrollIntoView({ block: 'nearest' });
   }
+}
+
+// Darken the theme's colours on the panel. A CSS filter would be simpler, but it costs the
+// panel a second full redraw for every change.
+const THEME_COLOURS = ['--screen-bg', '--ink', '--head-bg', '--head-ink', '--sel-bg', '--sel-ink', '--dim', '--lamp-bg'];
+
+function dimColours() {
+  const scr = $('screen');
+  for (const name of THEME_COLOURS) scr.style.removeProperty(name);
+  const cs = getComputedStyle(scr);
+  for (const name of THEME_COLOURS) {
+    const hex = cs.getPropertyValue(name).trim();
+    if (!/^#[0-9a-f]{6}$/i.test(hex)) continue;
+    const rgb = [1, 3, 5].map(i => Math.round(parseInt(hex.slice(i, i + 2), 16) * PANEL_DIM / 100));
+    scr.style.setProperty(name, `rgb(${rgb.join(', ')})`);
+  }
+  s.dimmed = data.theme;
 }
 
 // --- Panel pages ---------------------------------------------------------------------------

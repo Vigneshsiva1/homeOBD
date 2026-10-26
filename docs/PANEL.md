@@ -67,15 +67,20 @@ dtoverlay=piscreen,speed=16000000,rotate=180
   `rotate=0` is upside down. The UI is built for portrait (320 x 480). Changing the rotation
   means calibrating touch again.
 - **Speed:** 16 MHz SPI. A full screen is 300 KiB and takes about 0.33 s to send (measured;
-  the driver sends 4 KiB chunks, and a bigger `txbuflen` hangs it). surf repaints the whole
-  window on every touch event, even on a blank page, so a tap costs about two full redraws
-  (press, then release with the new screen) whatever the page does. Faster still would need a
-  higher `speed=` (untested on this board) or a browser that repaints only what changed.
+  the driver sends 4 KiB chunks, and a bigger `txbuflen` hangs it). 32 MHz was tried on
+  2026-10-26: 0.22 s a screen, but stripes showed while the screen changed, so it is back at
+  16 MHz. surf repaints the whole window on every touch event, even on a blank page, so a tap
+  costs about two full redraws (press, then release with the new screen) whatever the page
+  does.
+- **Brightness:** the backlight is wired always-on (the overlay's GPIO22 "led" switch does
+  nothing on this board), so `DIM=60` in `deploy/kiosk-session.sh` darkens the theme's colours
+  to 60 % instead (`?dim=60`, `dimColours` in `scantool.js`). 100 = as on the phone. A CSS
+  `filter: brightness()` looks the same but costs a second redraw per change.
 - **Touch:** `deploy/99-homeobd-panel.rules` holds the libinput calibration matrix (axes
-  swapped and both flipped for `rotate=180`). To redo it, with the kiosk showing:
-  `python3 deploy/calibrate-touch.py`, tap the top-left, top-right and bottom-left corners,
-  copy the printed matrix into the rule, re-run `install-kiosk.sh` and
-  `systemctl restart homeobd-kiosk`.
+  swapped and both flipped for `rotate=180`). To redo it: `python3 deploy/calibrate-touch.py
+  --write`. It stops the kiosk, draws five crosshairs on the panel one at a time (tap each
+  centre, a fingernail works best), fits the matrix, prints how far off each tap lands,
+  saves and applies it, and restarts the kiosk. The 2026-10-26 fit lands within 5 px.
 - **Framebuffer name:** the panel is `fb0`, or `fb1` when HDMI is plugged in at boot, so the
   udev rule adds `/dev/fb-panel` and the service passes the real path to X as `FRAMEBUFFER`
   (the fbdev driver won't open the symlink).
@@ -93,3 +98,8 @@ grep EE /var/log/Xorg.0.log
 - Taps land in the wrong place: calibrate again (above).
 - The `MESA-EGL ... Permission denied` lines in the journal are harmless: WebKit draws in
   software because the framebuffer has no GPU.
+- The panel stops updating for a few seconds now and then: memory. The kiosk takes about
+  560 MB (WebKit ~270, surf ~150, network process ~70, X ~60) of the Pi's 905 MB, and a Claude
+  Code session on the Pi another ~260 MB. With no swap, the kernel then drops program code
+  and reads it back from the SD card (`workingset_refault_file` in `/proc/vmstat` climbs).
+  The page's own state keeps going; only painting stalls.

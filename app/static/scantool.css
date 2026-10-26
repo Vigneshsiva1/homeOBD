@@ -70,6 +70,7 @@ main {
 .screen {
   flex: 1;
   min-height: 0;
+  --lamp-bg: #f2a33a;
   background: var(--screen-bg);
   color: var(--ink);
   border-radius: 6px;
@@ -120,7 +121,7 @@ main {
 .back[hidden] { display: none; }
 .lamp {
   flex-shrink: 0;
-  background: #f2a33a;
+  background: var(--lamp-bg);
   color: #1a1206;
   font-size: 18px;
   padding: 0 6px;

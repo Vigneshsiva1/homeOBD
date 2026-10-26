@@ -2,4 +2,4 @@
 # on whether HDMI is plugged in), and the touch calibration from deploy/calibrate-touch.py
 # (measured 2026-10-26 for rotate=180).
 SUBSYSTEM=="graphics", KERNEL=="fb[0-9]*", ATTR{name}=="fb_ili9486", SYMLINK+="fb-panel"
-ACTION=="add|change", KERNEL=="event*", ATTRS{name}=="ADS7846 Touchscreen", ENV{LIBINPUT_CALIBRATION_MATRIX}="-0.0631 -1.2945 1.1668 -1.2002 0.0050 1.1055"
+ACTION=="add|change", KERNEL=="event*", ATTRS{name}=="ADS7846 Touchscreen", ENV{LIBINPUT_CALIBRATION_MATRIX}="0.0171 -1.1464 1.0414 -1.1010 -0.0002 1.0372"
