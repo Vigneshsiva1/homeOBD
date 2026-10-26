@@ -302,7 +302,7 @@ Decisions recorded: homeOBD stays on the Pi; no off-Pi copy of its backups; appl
 switched by hand (homeOBD raises the code); automation rules live in homeOBD, not Home
 Assistant; homeserver status stays out of homeOBD; plants run on schedules, not sensors.
 
-## Phase 2 — IoT (on hold)
+## Phase 2 — IoT (next; see [SENSORS.md](SENSORS.md))
 
 Picked but parked on 2026-10-26: ESP32 boards with ESPHome, outdoor air quality from
 Open-Meteo, SHT41 ×3, PMS5003, Senseair S8/SCD40, soil sensors, leak probes; routines R01-R06,

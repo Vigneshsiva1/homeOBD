@@ -7,6 +7,7 @@ the CHK APT lamp. Self-hosted on a Raspberry Pi; later phases add IoT sensors th
 chores automatically.
 
 - [docs/PLAN.md](docs/PLAN.md): roadmap, code/state rules, data model, API, current milestone.
+- [docs/SENSORS.md](docs/SENSORS.md): **next phase**: ESP32 sensors. Current state, decisions, parts, design.
 - [prototype/](prototype/README.md): the original design reference for the look (colours,
   fonts, pixel screen, screen names). It is a starting point, not a spec.
 
