@@ -30,7 +30,21 @@ the goodtft / LCDwiki MPI3501 type (Waveshare 3.5" (A) clones have the same wiri
   300 MB for X, surf and its WebKit processes.
 - **`?panel`:** drops the device body, cable and Setup link so the scanner screen fills the
   panel, and shortens the footer so the whole menu fits. Setup needs a keyboard, so chores
-  are still added from a phone or laptop.
+  are still added from a phone or laptop. The webpage itself is unchanged.
+
+## Panel controls
+
+The panel can't scroll smoothly (see Speed), so it works with buttons instead of swipes:
+
+- Tap a row to open it, **‹ Back** to go back, as on the phone.
+- Screens longer than one page get **▲** / **▼** at the ends of the footer: one tap turns a
+  whole page (one redraw). A page starts with the first row the page before cut off; the
+  buttons dim on the first and last page. Swiping does nothing.
+- A screen is drawn once, with its data (it waits up to 250 ms for the API instead of first
+  drawing "Reading..."), and the 60 s refresh skips redraws that would change nothing.
+
+All of this is in `scantool.js` behind `PANEL` (`turnPage`, `pageStarts`, `go`) and in the
+`.panel` / `.pager` styles; without `?panel` the page behaves as before.
 
 ## Install
 
@@ -52,7 +66,11 @@ dtoverlay=piscreen,speed=16000000,rotate=180
 - **Orientation:** `rotate=180` is portrait the right way up for this panel on this Pi;
   `rotate=0` is upside down. The UI is built for portrait (320 x 480). Changing the rotation
   means calibrating touch again.
-- **Speed:** 16 MHz SPI; a full redraw takes about 0.15 s, so the UI avoids animations.
+- **Speed:** 16 MHz SPI. A full screen is 300 KiB and takes about 0.33 s to send (measured;
+  the driver sends 4 KiB chunks, and a bigger `txbuflen` hangs it). surf repaints the whole
+  window on every touch event, even on a blank page, so a tap costs about two full redraws
+  (press, then release with the new screen) whatever the page does. Faster still would need a
+  higher `speed=` (untested on this board) or a browser that repaints only what changed.
 - **Touch:** `deploy/99-homeobd-panel.rules` holds the libinput calibration matrix (axes
   swapped and both flipped for `rotate=180`). To redo it, with the kiosk showing:
   `python3 deploy/calibrate-touch.py`, tap the top-left, top-right and bottom-left corners,

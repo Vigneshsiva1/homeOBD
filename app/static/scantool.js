@@ -12,8 +12,10 @@ function fitScreen() {
 }
 fitScreen();
 window.addEventListener('resize', fitScreen);
-// The Pi's own 3.5" touch panel opens /?panel (deploy/homeobd-kiosk.service): the screen fills the panel.
-if (new URLSearchParams(location.search).has('panel')) document.documentElement.classList.add('panel');
+// The Pi's own 3.5" touch panel opens /?panel (deploy/homeobd-kiosk.service): the screen fills
+// the panel, and long screens turn page by page with buttons instead of scrolling (see turnPage).
+const PANEL = new URLSearchParams(location.search).has('panel');
+if (PANEL) document.documentElement.classList.add('panel');
 window.addEventListener('orientationchange', fitScreen);
 
 const MENU = [
@@ -164,6 +166,7 @@ const FULL = { PERM: 'Permanent', CONF: 'Confirmed', PEND: 'Pending' };
 const THEMES = ['classic', 'amber', 'green'];
 const BOOT_TICK_MS = 140;
 const REFRESH_MS = 60000;
+const PANEL_LOAD_WAIT_MS = 250; // see go()
 
 // UI state. `idx` holds the cursor for each list screen.
 const s = {
@@ -171,6 +174,8 @@ const s = {
   idx: { menu: 0, codes: 0, freezeList: 0, detail: 0, manual: 0 },
   sel: null, msg: null, busy: false,
   helpRet: 'detail', // where EXIT goes from a chore's help: its code detail or the Help list
+  rendered: null, // screen drawn last, so the panel knows when a new screen opens
+  drawn: null, // the panel's last drawn view, as JSON, to skip identical redraws
 };
 // Last data read from the unit.
 const data = {
@@ -213,14 +218,27 @@ const LOADERS = {
 
 async function go(screen) {
   s.screen = screen;
-  render();
   const load = LOADERS[screen];
+  // Each redraw of the panel takes about 0.3 s, so there the screen is drawn once, with its data,
+  // unless the unit is slow to answer. Until then the old screen's rows must not react.
+  let wait = null;
+  if (PANEL && load) {
+    s.busy = true;
+    wait = setTimeout(() => { s.busy = false; render(); }, PANEL_LOAD_WAIT_MS);
+  } else {
+    render();
+  }
   if (!load) return;
   try {
     await load();
   } catch (e) {
     linkLost();
     return;
+  } finally {
+    if (wait) {
+      clearTimeout(wait);
+      s.busy = false;
+    }
   }
   if (s.screen === screen) render();
 }
@@ -389,7 +407,10 @@ async function refresh() {
   } catch (e) {
     return; // keep showing the last data; a key press will report the lost link
   }
-  if (s.screen === screen && !s.busy) render();
+  if (s.screen !== screen || s.busy) return;
+  // The panel skips a redraw that would draw the same screen again.
+  if (PANEL && JSON.stringify(view()) === s.drawn) return;
+  render();
 }
 
 // --- Rendering -----------------------------------------------------------------------------
@@ -621,17 +642,24 @@ function el(tag, cls, text) {
 
 function render() {
   const v = view();
+  if (PANEL) s.drawn = JSON.stringify(v);
   $('screen').className = 'screen theme-' + data.theme;
   $('title').textContent = v.title;
   $('lamp').hidden = !data.lamp;
   $('back').hidden = !(BACK[s.screen] || s.screen === 'help');
-  if (v.keys.length) {
-    $('foot').replaceChildren(...v.keys.map(([label, action]) => {
-      const b = el('button', 'softkey', label);
-      b.type = 'button';
-      b.addEventListener('click', action === 'enter' ? enter : exit);
-      return b;
-    }));
+  const screenChanged = s.screen !== s.rendered;
+  s.rendered = s.screen;
+  const foot = v.keys.map(([label, action]) => {
+    const b = el('button', 'softkey', label);
+    b.type = 'button';
+    b.addEventListener('click', action === 'enter' ? enter : exit);
+    return b;
+  });
+  if (PANEL) {
+    if (!foot.length) foot.push(el('span', 'foot-hint', v.foot));
+    $('foot').replaceChildren(pagerButton(-1), ...foot, pagerButton(1));
+  } else if (foot.length) {
+    $('foot').replaceChildren(...foot);
   } else {
     $('foot').replaceChildren();
     $('foot').textContent = v.foot;
@@ -642,6 +670,7 @@ function render() {
     const img = el('img', 'pic');
     img.src = t.img;
     img.alt = t.alt;
+    img.addEventListener('load', updatePager); // a picture changes how many pages there are
     return img;
   });
   if (v.bar != null) {
@@ -666,13 +695,81 @@ function render() {
   const body = $('body');
   body.replaceChildren(...nodes);
   const sel = body.querySelector('.row.sel');
-  if (sel) sel.scrollIntoView({ block: 'nearest' });
+  if (PANEL) {
+    // A new screen opens on the page holding the selected row (or the first page); a refresh of
+    // the same screen stays on the page it was on.
+    if (screenChanged) {
+      const starts = pageStarts(body);
+      body.scrollTop = sel ? starts.filter(t => t <= sel.offsetTop).pop() : 0;
+    }
+    updatePager();
+  } else if (sel) {
+    sel.scrollIntoView({ block: 'nearest' });
+  }
+}
+
+// --- Panel pages ---------------------------------------------------------------------------
+// The Pi's panel redraws over SPI at a few frames a second, so a swiped list smears and lags.
+// There the screen body doesn't scroll by touch; ▲ and ▼ at the ends of the footer turn a whole
+// page, one redraw each. A page starts with the first row or line the page before cut off.
+
+const PAGE_ICONS = {
+  [-1]: '<svg aria-hidden="true" viewBox="0 0 21 12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10 10.5 1.5 19 10"/></svg>',
+  1: '<svg aria-hidden="true" viewBox="0 0 21 12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2 10.5 10.5 19 2"/></svg>',
+};
+
+function pagerButton(dir) {
+  const b = el('button', 'pager');
+  b.type = 'button';
+  b.setAttribute('aria-label', dir < 0 ? 'Previous page' : 'Next page');
+  b.innerHTML = PAGE_ICONS[dir];
+  b.addEventListener('click', () => turnPage(dir));
+  return b;
+}
+
+// scrollTop of every page: the next page starts at the first item that doesn't fit whole.
+function pageStarts(body) {
+  const pad = parseFloat(getComputedStyle(body).paddingTop) || 0;
+  const h = body.clientHeight;
+  const max = body.scrollHeight - h;
+  const starts = [0];
+  for (const n of body.children) {
+    const last = starts[starts.length - 1];
+    if (last >= max) break;
+    if (n.offsetTop + n.offsetHeight > last + h) {
+      let next = Math.min(n.offsetTop - pad, max);
+      if (next <= last) next = Math.min(last + h, max); // an item taller than a page
+      starts.push(next);
+    }
+  }
+  return starts;
+}
+
+function turnPage(dir) {
+  const body = $('body');
+  const starts = pageStarts(body);
+  const page = starts.filter(t => t <= body.scrollTop + 1).length - 1;
+  body.scrollTop = starts[Math.max(0, Math.min(starts.length - 1, page + dir))];
+  updatePager();
+}
+
+// Page buttons show only on screens longer than a page, dimmed at the first and last page.
+function updatePager() {
+  const [up, down] = $('foot').querySelectorAll('.pager');
+  if (!up) return;
+  const body = $('body');
+  const max = body.scrollHeight - body.clientHeight;
+  up.hidden = down.hidden = max < 1;
+  up.disabled = body.scrollTop < 1;
+  down.disabled = body.scrollTop > max - 1;
 }
 
 // --- Wiring --------------------------------------------------------------------------------
 
 
 $('back').addEventListener('click', exit);
+// On the panel, a button that takes focus on press costs a full-screen redraw of its own.
+if (PANEL) document.addEventListener('mousedown', e => e.preventDefault());
 
 document.addEventListener('keydown', e => {
   if (e.altKey || e.ctrlKey || e.metaKey) return;

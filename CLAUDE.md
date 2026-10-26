@@ -24,8 +24,10 @@ piece of work.
 - Primary target: the home-screen app on an iPhone 17 / 17 Pro (402 x 874 pt), opened from
   Chrome or Safari. Check layouts at that size first; desktop is secondary.
 - Second target: the Pi's 3.5" touch panel, 320 x 480 portrait, via `/?panel`
-  (`.panel` styles at the end of `scantool.css`). Check changes there too; it redraws over
-  SPI at a few frames a second, so avoid animations.
+  (`.panel` styles at the end of `scantool.css`). Check changes there too; each full redraw
+  takes about 0.33 s over SPI, so avoid animations and needless redraws. On the panel only,
+  long screens turn page by page with ▲ / ▼ footer buttons instead of scrolling (set by the
+  user, 2026-10-26); the webpage keeps scrolling and must stay as it is.
 - The scanner fills the whole phone screen. Every screen is the same size; long content
   scrolls inside the screen, never the page.
 - Full height comes from `fitScreen()` in `scantool.js` setting `--app-height` on `<html>`:

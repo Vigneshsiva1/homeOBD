@@ -220,3 +220,27 @@ main {
 /* A shorter footer lets the whole diagnostic menu fit on the 480 px panel without scrolling. */
 .panel .screen-foot { height: 54px; padding-top: 5px; padding-bottom: 5px; }
 .panel .screen-body { padding: 4px 0; }
+/* No touch scrolling on the panel: long screens turn page by page with the footer's ▲ / ▼
+   (turnPage in scantool.js). position: relative measures rows from the top of the body. */
+.panel .screen-body { overflow-y: hidden; position: relative; }
+.foot-hint { flex: 1; text-align: center; }
+.pager {
+  appearance: none;
+  flex: 0 0 52px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--sel-bg);
+  box-shadow: inset 0 0 0 2px var(--sel-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pager svg { width: 21px; height: 12px; }
+.pager:disabled { opacity: 0.3; }
+.pager[hidden] { display: none; }
