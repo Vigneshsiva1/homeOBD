@@ -119,9 +119,8 @@ days), never stored, so they can't drift:
 - No port forwarding, TLS, public DNS or login for the POC: anyone on the home Wi-Fi can use it.
   Optional hardening: a firewall rule allowing port 8000 only from the local subnet.
 
-**Time zone:** the Pi's clock is currently UTC. Set it to the local zone (`dietpi-config` →
-Localisation, or `timedatectl set-timezone <Region/City>`) so "due today" and streak days
-roll over at local midnight.
+**Time zone:** the Pi runs on `America/Chicago`, so "due today" and streak days roll over
+at local midnight.
 
 ## Data model (Phase 1)
 
@@ -226,12 +225,13 @@ Files: `app/static/index.html` + `scantool.js` + `scantool.css` (scanner, served
 scanner re-reads its data every 60 s and whenever the tab becomes visible again.
 
 ### M3 — Run it on the Pi for real
-- [ ] Set the Pi's time zone.
+- [x] Time zone set to `America/Chicago`.
 - [x] `deploy/homeobd.service`: starts on boot, restarts 3 s after a crash. Runs as root
   (the repo is in `/root`) with systemd sandboxing: everything read-only except `data/`.
   Access log is off to keep the RAM journal quiet.
 - [x] `avahi-daemon` installed: the app is at `http://photostorage.local:8000`.
-- [ ] DHCP reservation for the Pi (`192.168.0.157`) on the router (do this in the router's admin page).
+- [x] No DHCP reservation for now: use the Pi's IP (`192.168.0.157`). If the router ever hands
+  out a new one, `photostorage.local` still finds the Pi.
 - [x] Nightly backup: `deploy/backup.sh` via `homeobd-backup.timer` at 03:30 (or soon after boot
   if the Pi was off). Uses SQLite's online `.backup`, checks integrity, keeps the newest 14
   in `backups/` (not in git). Backups are on the same SD card; copying them off the Pi is a
