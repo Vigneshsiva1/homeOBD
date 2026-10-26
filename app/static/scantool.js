@@ -103,6 +103,7 @@ const GUIDE = [
     'Quick chores, every 1-2 days and under 1 h: 8 pm on the day they are due.',
     'Other chores under 1 h: 8 am, and again at 6 pm on weekdays if still open.',
     'Chores of 1 h or more: weekends only, 8 am and 6 pm.',
+    'A chore can also have a fixed time every day: set Notify at in Setup. Unload the dishwasher is 8 am, Load is 8 pm.',
     ' ',
     'They repeat in their slot each day until you mark the chore done.',
     'Erased (snoozed) chores stay quiet for 24 h.',

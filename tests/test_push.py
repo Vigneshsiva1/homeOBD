@@ -130,3 +130,24 @@ def test_minutes_field(client):
     r = client.patch("/api/chores/K0001", json={"minutes": 25})
     assert (r.json()["minutes"], r.json()["notify"]) == (25, "quick")
     assert client.patch("/api/chores/K0001", json={"minutes": 0}).status_code == 422
+
+
+def test_fixed_notify_slot_overrides_the_tier():
+    unload = engine.evaluate("K0005", "Unload", 1, TODAY - timedelta(days=1), None, TODAY,
+                             datetime(2026, 10, 28, 12, tzinfo=TZ), minutes=10, notify_slot="am")
+    load = engine.evaluate("K0001", "Load", 1, TODAY - timedelta(days=1), None, TODAY,
+                           datetime(2026, 10, 28, 12, tzinfo=TZ), minutes=10, notify_slot="eve")
+    codes = [unload, load]
+    for day in (2, 5):  # every day, weekday or weekend
+        assert [c.code for c in engine.slot_codes("am", day, codes)] == ["K0005"]
+        assert [c.code for c in engine.slot_codes("eve", day, codes)] == ["K0001"]
+        assert engine.slot_codes("pm", day, codes) == []
+
+
+def test_notify_slot_api(client):
+    assert client.get("/api/codes/K0001").json()["notify_slot"] == "auto"
+    assert client.patch("/api/chores/K0001", json={"notify_slot": "am"}).json()["notify_slot"] == "am"
+    assert client.patch("/api/chores/K0001", json={"notify_slot": "auto"}).json()["notify_slot"] == "auto"
+    assert client.patch("/api/chores/K0001", json={"notify_slot": "noon"}).status_code == 422
+    r = client.post("/api/chores", json={"zone": "K", "category": 0, "name": "Unload", "interval_days": 1, "notify_slot": "am"})
+    assert r.json()["notify_slot"] == "am"

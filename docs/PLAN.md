@@ -136,6 +136,7 @@ at local midnight.
 chores         (id, code UNIQUE, zone, name, description,
                 how_to, done_when,                     -- Help screen: steps, finished state
                 minutes,                               -- rough duration; picks notification times
+                notify_slot,                           -- fixed 'am'/'pm'/'eve' slot, NULL = automatic
                 interval_days, last_done_at, snoozed_until,
                 trigger_type DEFAULT 'schedule',      -- 'sensor' reserved for Phase 2
                 created_at)
@@ -290,6 +291,9 @@ To restore: `systemctl stop homeobd`, copy a backup over `data/homeobd.db` (and 
   **6 pm** on weekdays; chores of 1 h or more only on **Saturday/Sunday at 8 am and 6 pm**. One
   notification per slot lists every active code in it; snoozed codes stay quiet; a slot missed
   while the Pi was off still fires up to 2 h late. Turned on per device on the Setup page.
+  A chore can override its slot with `notify_slot` (`am`/`pm`/`eve`, every day; NULL =
+  automatic), set as **Notify at** on the Setup page. Used for K0001 Load & run the dishwasher
+  (8 pm) and K0005 Unload the dishwasher (8 am).
 - Seasonal intervals (e.g. plants and fertilizing less often in winter).
 - Freeze frame "Set on" = the day the chore actually went overdue.
 - Maybe: sensor readings on Live data (waits for Phase 2).

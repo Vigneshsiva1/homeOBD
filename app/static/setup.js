@@ -118,6 +118,7 @@ function startEdit(c) {
   $('name').value = c.name;
   $('interval').value = c.interval_days;
   $('minutes').value = c.minutes;
+  $('notify-slot').value = c.notify_slot;
   $('last-done').value = c.last_done;
   $('description').value = c.description;
   $('how-to').value = c.how_to;
@@ -150,6 +151,7 @@ $('chore-form').addEventListener('submit', async e => {
     name: $('name').value.trim(),
     interval_days: Number($('interval').value),
     minutes: Number($('minutes').value),
+    notify_slot: $('notify-slot').value,
     description: $('description').value.trim(),
     how_to: $('how-to').value.trim(),
     done_when: $('done-when').value.trim(),

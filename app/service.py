@@ -29,6 +29,7 @@ def _to_code(row: sqlite3.Row, at: datetime) -> engine.Code:
         row["how_to"],
         row["done_when"],
         row["minutes"],
+        row["notify_slot"],
     )
 
 

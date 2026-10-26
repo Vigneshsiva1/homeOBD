@@ -37,6 +37,7 @@ def code_json(c: engine.Code) -> dict:
         "done_when": c.done_when,
         "minutes": c.minutes,
         "notify": engine.notify_tier(c.interval_days, c.minutes),
+        "notify_slot": c.notify_slot or "auto",
         "zone": c.zone,
         "zone_name": c.zone_name,
         "category": c.category,
@@ -188,6 +189,14 @@ def list_chores(conn: sqlite3.Connection = Conn):
     return {"chores": [code_json(c) for c in service.load_codes(conn, service.now())]}
 
 
+# When to notify about a chore: "auto" (from its interval and minutes) or a fixed slot.
+NotifySlot = Literal["auto", "am", "pm", "eve"]
+
+
+def _slot(value: str) -> str | None:
+    return None if value == "auto" else value
+
+
 class ChoreIn(BaseModel):
     code: str | None = None
     zone: str | None = None
@@ -197,6 +206,7 @@ class ChoreIn(BaseModel):
     how_to: str = Field("", max_length=2000)
     done_when: str = Field("", max_length=500)
     minutes: int = Field(15, ge=1, le=1440)
+    notify_slot: NotifySlot = "auto"
     interval_days: int = Field(ge=1, le=3650)
     last_done: date | None = None
 
@@ -218,8 +228,8 @@ def create_chore(body: ChoreIn, conn: sqlite3.Connection = Conn):
     last_done = _done_timestamp(body.last_done, at) if body.last_done else at.isoformat()
     try:
         conn.execute(
-            "INSERT INTO chores (code, name, description, how_to, done_when, minutes, interval_days,"
-            " last_done_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO chores (code, name, description, how_to, done_when, minutes, notify_slot,"
+            " interval_days, last_done_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 code,
                 body.name,
@@ -227,6 +237,7 @@ def create_chore(body: ChoreIn, conn: sqlite3.Connection = Conn):
                 body.how_to,
                 body.done_when,
                 body.minutes,
+                _slot(body.notify_slot),
                 body.interval_days,
                 last_done,
                 at.isoformat(),
@@ -244,6 +255,7 @@ class ChorePatch(BaseModel):
     how_to: str | None = Field(None, max_length=2000)
     done_when: str | None = Field(None, max_length=500)
     minutes: int | None = Field(None, ge=1, le=1440)
+    notify_slot: NotifySlot | None = None
     interval_days: int | None = Field(None, ge=1, le=3650)
     last_done: date | None = None
 
@@ -253,6 +265,8 @@ def update_chore(code: str, body: ChorePatch, conn: sqlite3.Connection = Conn):
     at = service.now()
     _require(service.get_code(conn, code, at), code)
     fields = body.model_dump(exclude_unset=True, exclude_none=True)
+    if "notify_slot" in fields:
+        fields["notify_slot"] = _slot(fields["notify_slot"])
     if "last_done" in fields:
         fields["last_done_at"] = _done_timestamp(fields.pop("last_done"), at)
     if fields:

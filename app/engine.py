@@ -71,6 +71,7 @@ class Code:
     how_to: str = ""
     done_when: str = ""
     minutes: int = 15  # rough time the chore takes; picks its notification times
+    notify_slot: str | None = None  # fixed slot ("am"/"pm"/"eve") instead of the automatic one
 
     @property
     def zone(self) -> str:
@@ -110,6 +111,7 @@ def evaluate(
     how_to: str = "",
     done_when: str = "",
     minutes: int = 15,
+    notify_slot: str | None = None,
 ) -> Code:
     left = days_left(last_done, interval_days, today)
     return Code(
@@ -124,6 +126,7 @@ def evaluate(
         how_to=how_to,
         done_when=done_when,
         minutes=minutes,
+        notify_slot=notify_slot,
     )
 
 
@@ -209,14 +212,18 @@ def notify_tier(interval_days: int, minutes: int) -> str:
 
 
 def slot_codes(slot: str, weekday: int, codes: list[Code]) -> list[Code]:
-    """Active codes to announce in a notification slot. `weekday` is Monday=0 .. Sunday=6."""
+    """Active codes to announce in a notification slot. `weekday` is Monday=0 .. Sunday=6.
+    A chore with a fixed notify_slot is announced in that slot only, every day."""
     weekend = weekday >= 5
     wanted = {
         "eve": {"quick"},
         "am": {"standard"} | ({"long"} if weekend else set()),
         "pm": {"long"} if weekend else {"standard"},
     }[slot]
-    return [c for c in active_codes(codes) if notify_tier(c.interval_days, c.minutes) in wanted]
+    return [
+        c for c in active_codes(codes)
+        if (c.notify_slot == slot if c.notify_slot else notify_tier(c.interval_days, c.minutes) in wanted)
+    ]
 
 
 def notification_text(codes: list[Code], shown: int = 4) -> tuple[str, str]:

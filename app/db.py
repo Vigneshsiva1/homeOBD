@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS chores (
     how_to        TEXT NOT NULL DEFAULT '',
     done_when     TEXT NOT NULL DEFAULT '',
     minutes       INTEGER NOT NULL DEFAULT 15,
+    notify_slot   TEXT CHECK (notify_slot IN ('am', 'pm', 'eve')),  -- NULL = automatic
     interval_days INTEGER NOT NULL CHECK (interval_days > 0),
     last_done_at  TEXT NOT NULL,
     snoozed_until TEXT,
@@ -72,6 +73,7 @@ ADDED_COLUMNS = [
     ("chores", "how_to", "TEXT NOT NULL DEFAULT ''"),
     ("chores", "done_when", "TEXT NOT NULL DEFAULT ''"),
     ("chores", "minutes", "INTEGER NOT NULL DEFAULT 15"),
+    ("chores", "notify_slot", "TEXT CHECK (notify_slot IN ('am', 'pm', 'eve'))"),
 ]
 
 # (code, name, interval_days, days since last done). The offsets reproduce the prototype's
