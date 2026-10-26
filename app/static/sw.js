@@ -3,7 +3,7 @@
 // /api/ requests are never cached: the scanner must always show live data.
 'use strict';
 
-const CACHE = 'apt-obd-v5'; // bump to drop every cached copy on the next visit
+const CACHE = 'apt-obd-v6'; // bump to drop every cached copy on the next visit
 const SHELL = [
   '/',
   '/setup',
@@ -43,5 +43,34 @@ self.addEventListener('fetch', event => {
         return response;
       })
       .catch(() => caches.match(event.request)),
+  );
+});
+
+// Notifications from the Pi (see app/push.py). iOS requires every push to show a notification.
+self.addEventListener('push', event => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    data = { body: event.data ? event.data.text() : '' };
+  }
+  event.waitUntil(self.registration.showNotification(data.title || 'APT-OBD', {
+    body: data.body || '',
+    tag: data.tag,
+    icon: '/static/icons/icon-192.png',
+    badge: '/static/icons/icon-192.png',
+    data: { url: data.url || '/' },
+  }));
+});
+
+// Tapping a notification opens the scanner, reusing an open window if there is one.
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windows => {
+      const open = windows.find(w => new URL(w.url).origin === location.origin);
+      return open ? open.focus().then(w => w.navigate(url)) : self.clients.openWindow(url);
+    }),
   );
 });

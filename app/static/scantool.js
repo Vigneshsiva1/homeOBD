@@ -325,6 +325,7 @@ function view() {
       kv('State', FULL[c.state]);
       kv('Status', c.status);
       kv('Interval', days(c.interval_days));
+      kv('Takes', 'about ' + c.minutes + ' min');
       kv('Last done', fmtDate(c.last_done));
       v.rows = DETAIL_ROWS.map((label, i) => ({ label, tag: '', sel: i === s.idx.detail, i }));
       break;
@@ -346,7 +347,7 @@ function view() {
         v.lines = ['No help yet.', 'Add it on the Setup page.'];
         break;
       }
-      v.lines = [c.name, SPACER, ...textLines(c.how_to)];
+      v.lines = [c.name, 'Takes about ' + c.minutes + ' min', SPACER, ...textLines(c.how_to)];
       if (c.done_when) {
         if (c.how_to) v.lines.push(SPACER);
         v.lines.push('DONE WHEN', ...textLines(c.done_when));

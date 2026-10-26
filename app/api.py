@@ -10,7 +10,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
-from . import __version__, db, engine, service
+from . import __version__, db, engine, push, service
 
 router = APIRouter(prefix="/api")
 
@@ -35,6 +35,8 @@ def code_json(c: engine.Code) -> dict:
         "description": c.description,
         "how_to": c.how_to,
         "done_when": c.done_when,
+        "minutes": c.minutes,
+        "notify": engine.notify_tier(c.interval_days, c.minutes),
         "zone": c.zone,
         "zone_name": c.zone_name,
         "category": c.category,
@@ -193,6 +195,7 @@ class ChoreIn(BaseModel):
     description: str = Field("", max_length=500)
     how_to: str = Field("", max_length=2000)
     done_when: str = Field("", max_length=500)
+    minutes: int = Field(15, ge=1, le=1440)
     interval_days: int = Field(ge=1, le=3650)
     last_done: date | None = None
 
@@ -214,14 +217,15 @@ def create_chore(body: ChoreIn, conn: sqlite3.Connection = Conn):
     last_done = _done_timestamp(body.last_done, at) if body.last_done else at.isoformat()
     try:
         conn.execute(
-            "INSERT INTO chores (code, name, description, how_to, done_when, interval_days,"
-            " last_done_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO chores (code, name, description, how_to, done_when, minutes, interval_days,"
+            " last_done_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 code,
                 body.name,
                 body.description,
                 body.how_to,
                 body.done_when,
+                body.minutes,
                 body.interval_days,
                 last_done,
                 at.isoformat(),
@@ -238,6 +242,7 @@ class ChorePatch(BaseModel):
     description: str | None = Field(None, max_length=500)
     how_to: str | None = Field(None, max_length=2000)
     done_when: str | None = Field(None, max_length=500)
+    minutes: int | None = Field(None, ge=1, le=1440)
     interval_days: int | None = Field(None, ge=1, le=3650)
     last_done: date | None = None
 
@@ -283,3 +288,53 @@ def update_settings(body: SettingsIn, conn: sqlite3.Connection = Conn):
     )
     conn.commit()
     return read_settings(conn)
+
+
+# --- Notifications ---------------------------------------------------------------------------
+
+
+@router.get("/push/key")
+def push_key(conn: sqlite3.Connection = Conn):
+    return {"public_key": push.public_key(conn)}
+
+
+class SubscriptionKeys(BaseModel):
+    p256dh: str = Field(min_length=1, max_length=200)
+    auth: str = Field(min_length=1, max_length=100)
+
+
+class SubscriptionIn(BaseModel):
+    endpoint: str = Field(min_length=1, max_length=1000, pattern=r"^https://")
+    keys: SubscriptionKeys
+
+
+@router.post("/push/subscribe", status_code=201)
+def push_subscribe(body: SubscriptionIn, request: Request, conn: sqlite3.Connection = Conn):
+    agent = request.headers.get("user-agent", "")[:200]
+    push.subscribe(conn, body.endpoint, body.keys.p256dh, body.keys.auth, agent, service.now())
+    return {"devices": push.subscription_count(conn)}
+
+
+class EndpointIn(BaseModel):
+    endpoint: str = Field(min_length=1, max_length=1000)
+
+
+@router.post("/push/unsubscribe")
+def push_unsubscribe(body: EndpointIn, conn: sqlite3.Connection = Conn):
+    push.unsubscribe(conn, body.endpoint)
+    return {"devices": push.subscription_count(conn)}
+
+
+@router.post("/push/test")
+def push_test(conn: sqlite3.Connection = Conn):
+    if not push.subscription_count(conn):
+        raise HTTPException(409, "No devices have notifications turned on")
+    return push.send_all(conn, "APT-OBD test", "Notifications are working.", tag="test")
+
+
+@router.get("/push/status")
+def push_status(conn: sqlite3.Connection = Conn):
+    return {
+        "devices": push.subscription_count(conn),
+        "slots": {slot: when.strftime("%H:%M") for slot, when in engine.SLOTS.items()},
+    }

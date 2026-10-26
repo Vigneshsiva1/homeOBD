@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS chores (
     description   TEXT NOT NULL DEFAULT '',
     how_to        TEXT NOT NULL DEFAULT '',
     done_when     TEXT NOT NULL DEFAULT '',
+    minutes       INTEGER NOT NULL DEFAULT 15,
     interval_days INTEGER NOT NULL CHECK (interval_days > 0),
     last_done_at  TEXT NOT NULL,
     snoozed_until TEXT,
@@ -37,6 +38,26 @@ CREATE TABLE IF NOT EXISTS daily_health (
     health        INTEGER NOT NULL,
     overdue_count INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS push_keys (     -- this unit's VAPID key pair; never sent to the API
+    id          INTEGER PRIMARY KEY CHECK (id = 1),
+    private_pem TEXT NOT NULL,
+    public_key  TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id         INTEGER PRIMARY KEY,
+    endpoint   TEXT NOT NULL UNIQUE,
+    p256dh     TEXT NOT NULL,
+    auth       TEXT NOT NULL,
+    user_agent TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS notify_log (    -- one row per notification slot handled
+    date    TEXT NOT NULL,
+    slot    TEXT NOT NULL,
+    sent_at TEXT NOT NULL,
+    codes   TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (date, slot)
+);
 CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
@@ -50,6 +71,7 @@ DEFAULT_SETTINGS = {"unit_id": "APT-01", "theme": "classic"}
 ADDED_COLUMNS = [
     ("chores", "how_to", "TEXT NOT NULL DEFAULT ''"),
     ("chores", "done_when", "TEXT NOT NULL DEFAULT ''"),
+    ("chores", "minutes", "INTEGER NOT NULL DEFAULT 15"),
 ]
 
 # (code, name, interval_days, days since last done). The offsets reproduce the prototype's

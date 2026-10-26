@@ -131,3 +131,5 @@ textarea { resize: vertical; }
   .chore { grid-template-columns: auto minmax(0, 1fr); }
   .actions { grid-column: 1 / -1; justify-content: flex-end; }
 }
+.hint { margin: 0 0 14px; color: var(--dim); font-size: 14px; line-height: 1.5; }
+.hint b { color: var(--ink); font-weight: 600; }

@@ -39,6 +39,17 @@
   </section>
 
   <section class="card">
+    <h2>Notifications</h2>
+    <p class="hint">Quick daily chores at <b>8 pm</b>. Other chores at <b>8 am</b>, with a <b>6 pm</b> reminder on weekdays. Chores that take an hour or more only on <b>Saturday and Sunday</b>, at 8 am and 6 pm.</p>
+    <div class="form-actions">
+      <button type="button" id="push-on" class="btn primary">Turn on notifications</button>
+      <button type="button" id="push-test" class="btn" hidden>Send test</button>
+      <button type="button" id="push-off" class="btn" hidden>Turn off</button>
+      <span id="push-msg" class="msg" role="status"></span>
+    </div>
+  </section>
+
+  <section class="card">
     <h2 id="form-title">Add chore</h2>
     <form id="chore-form" class="grid">
       <label>Zone
@@ -55,6 +66,9 @@
       </label>
       <label>Last done <small>(blank = today)</small>
         <input id="last-done" type="date">
+      </label>
+      <label>Takes about (minutes) <small>(1 h+ = weekend reminders)</small>
+        <input id="minutes" type="number" required min="1" max="1440" inputmode="numeric" value="15">
       </label>
       <label class="wide">Notes <small>(optional)</small>
         <textarea id="description" maxlength="500" rows="2"></textarea>

@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import __version__, db, service
+from . import __version__, db, push, service
 from .api import router
 
 log = logging.getLogger("homeobd")
@@ -20,16 +20,20 @@ DEFAULT_DB = Path(__file__).resolve().parent.parent / "data" / "homeobd.db"
 TICK_SECONDS = 300
 
 
-def _sync(path: str | Path) -> None:
+def _sync(path: str | Path, notify: bool = True) -> None:
     conn = db.connect(path)
     try:
-        service.sync(conn, service.now())
+        at = service.now()
+        service.sync(conn, at)
+        if notify:
+            push.run_schedule(conn, at)
     finally:
         conn.close()
 
 
 async def _tick(path: str | Path) -> None:
-    """Every few minutes: capture freeze frames and record today's health for streaks."""
+    """Every few minutes: capture freeze frames, record today's health for streaks, and send any
+    notification slot that is due."""
     while True:
         await asyncio.sleep(TICK_SECONDS)
         try:
@@ -39,12 +43,13 @@ async def _tick(path: str | Path) -> None:
 
 
 def create_app(db_path: str | Path | None = None, tick: bool = True) -> FastAPI:
+    # tick=False (tests) also skips notifications, so tests never reach a real push service.
     path = db_path or os.environ.get("HOMEOBD_DB") or DEFAULT_DB
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         db.init(path, service.now())
-        await asyncio.to_thread(_sync, path)
+        await asyncio.to_thread(_sync, path, tick)
         task = asyncio.create_task(_tick(path)) if tick else None
         yield
         if task:

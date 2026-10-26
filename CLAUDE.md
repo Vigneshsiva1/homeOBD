@@ -62,7 +62,8 @@ piece of work.
 - **Private only: home network + the user's tailnet.** Plain HTTP on the LAN
   (`http://192.168.0.157:8000`) and HTTPS through `tailscale serve` on the tailnet
   (`https://photostorage.tail82999e.ts.net`). Never Tailscale Funnel, port forwarding, public
-  DNS or anything else that reaches the public internet. Don't add internet-facing features
-  unless asked.
+  DNS or anything else that makes homeOBD reachable from the public internet. Outgoing
+  requests are fine where a feature needs them: Web Push messages go out to the phone's push
+  service (Apple's). Don't add internet-facing features unless asked.
 - This Claude Code session reaches the Pi over Tailscale: never stop, remove or reconfigure
   Tailscale in a way that could drop the connection.

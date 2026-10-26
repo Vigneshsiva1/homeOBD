@@ -135,6 +135,7 @@ at local midnight.
 ```
 chores         (id, code UNIQUE, zone, name, description,
                 how_to, done_when,                     -- Help screen: steps, finished state
+                minutes,                               -- rough duration; picks notification times
                 interval_days, last_done_at, snoozed_until,
                 trigger_type DEFAULT 'schedule',      -- 'sensor' reserved for Phase 2
                 created_at)
@@ -142,6 +143,9 @@ completions    (id, chore_id, done_at, note)
 freeze_frames  (id, chore_id, set_at, health_at_set, streak_at_set, cleared_at)
 daily_health   (date PK, health, overdue_count)       -- powers streak / best streak
 settings       (key PK, value)                        -- unit_id, theme
+push_keys      (id=1, private_pem, public_key)        -- this unit's VAPID keys, never via the API
+push_subscriptions (endpoint UNIQUE, p256dh, auth, user_agent, created_at)
+notify_log     (date, slot, sent_at, codes)           -- each notification slot handled once
 ```
 
 Zones are fixed (`engine.ZONES`) and a chore's zone is the first letter of its code, so there is
@@ -166,6 +170,10 @@ no zones table.
 | DELETE | `/api/chores/{code}`         | Remove a chore                                         |
 | GET/PUT| `/api/settings`              | Theme, unit ID                                         |
 | GET    | `/api/meta`                  | Zones, categories and themes (feeds the Setup page's menus) |
+| GET    | `/api/push/key`              | VAPID public key for subscribing                        |
+| POST   | `/api/push/subscribe` / `unsubscribe` | Add or remove this device's push subscription  |
+| POST   | `/api/push/test`             | Send a test notification to every subscribed device     |
+| GET    | `/api/push/status`           | Subscribed device count and slot times                  |
 
 ## Seed chores (18, matching the prototype's "Tasks tracked 18")
 
@@ -276,7 +284,12 @@ To restore: `systemctl stop homeobd`, copy a backup over `data/homeobd.db` (and 
   `tailscale serve` → `https://photostorage.tail82999e.ts.net` (no Funnel). Add it from Chrome or
   Safari: Share → Add to Home Screen.
 - Completion history per code.
-- Phone alerts for new overdue codes via ntfy, on the same topic as the homeserver.
+- Phone notifications ✅ via Web Push from the home-screen app (chosen over ntfy on 2026-10-26).
+  Each chore has an estimated `minutes`; the schedule (`engine.slot_codes`, `app/push.py`):
+  quick chores (every 1-2 days, under 1 h) at **8 pm**; other chores under 1 h at **8 am** plus
+  **6 pm** on weekdays; chores of 1 h or more only on **Saturday/Sunday at 8 am and 6 pm**. One
+  notification per slot lists every active code in it; snoozed codes stay quiet; a slot missed
+  while the Pi was off still fires up to 2 h late. Turned on per device on the Setup page.
 - Seasonal intervals (e.g. plants and fertilizing less often in winter).
 - Freeze frame "Set on" = the day the chore actually went overdue.
 - Maybe: sensor readings on Live data (waits for Phase 2).

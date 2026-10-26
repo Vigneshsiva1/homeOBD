@@ -6,7 +6,7 @@ and reused later for sensor rules. Rules are documented in docs/PLAN.md.
 
 import re
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 
 ZONES = {
     "K": "Kitchen",
@@ -70,6 +70,7 @@ class Code:
     snoozed: bool
     how_to: str = ""
     done_when: str = ""
+    minutes: int = 15  # rough time the chore takes; picks its notification times
 
     @property
     def zone(self) -> str:
@@ -104,6 +105,7 @@ def evaluate(
     description: str = "",
     how_to: str = "",
     done_when: str = "",
+    minutes: int = 15,
 ) -> Code:
     left = days_left(last_done, interval_days, today)
     return Code(
@@ -117,6 +119,7 @@ def evaluate(
         snoozed=snoozed_until is not None and snoozed_until > now,
         how_to=how_to,
         done_when=done_when,
+        minutes=minutes,
     )
 
 
@@ -181,3 +184,43 @@ def streaks(history: dict[date, int], today: date, overdue_today: int) -> tuple[
     counts = dict(history)
     counts[today] = overdue_today
     return current_streak(counts, today), best_streak(counts)
+
+
+# --- Notifications --------------------------------------------------------------------------
+# quick:   daily / every-other-day chores under an hour -> 8 pm each day they're due
+# standard: everything else under an hour              -> 8 am, plus 6 pm on weekdays
+# long:    an hour or more                             -> weekends only, 8 am and 6 pm
+QUICK_MAX_INTERVAL = 2
+LONG_MINUTES = 60
+SLOTS = {"am": time(8, 0), "pm": time(18, 0), "eve": time(20, 0)}
+SLOT_GRACE = timedelta(hours=2)  # a slot missed while the Pi was off still fires this long after
+
+
+def notify_tier(interval_days: int, minutes: int) -> str:
+    if minutes >= LONG_MINUTES:
+        return "long"
+    if interval_days <= QUICK_MAX_INTERVAL:
+        return "quick"
+    return "standard"
+
+
+def slot_codes(slot: str, weekday: int, codes: list[Code]) -> list[Code]:
+    """Active codes to announce in a notification slot. `weekday` is Monday=0 .. Sunday=6."""
+    weekend = weekday >= 5
+    wanted = {
+        "eve": {"quick"},
+        "am": {"standard"} | ({"long"} if weekend else set()),
+        "pm": {"long"} if weekend else {"standard"},
+    }[slot]
+    return [c for c in active_codes(codes) if notify_tier(c.interval_days, c.minutes) in wanted]
+
+
+def notification_text(codes: list[Code], shown: int = 4) -> tuple[str, str]:
+    """(title, body) for one notification listing `codes` (worst first)."""
+    if len(codes) == 1:
+        c = codes[0]
+        return f"{c.code} {c.name}", f"{c.status} · about {c.minutes} min"
+    names = [f"{c.code} {c.name}" for c in codes[:shown]]
+    if len(codes) > shown:
+        names.append(f"+{len(codes) - shown} more")
+    return f"{len(codes)} chores due", "\n".join(names)

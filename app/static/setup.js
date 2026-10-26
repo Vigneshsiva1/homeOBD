@@ -91,7 +91,7 @@ function choreItem(c) {
   const main = el('div');
   const top = el('div', 'chore-top');
   top.append(el('span', 'code', c.code), el('span', 'name', c.name));
-  const detail = 'Every ' + c.interval_days + ' d · ' + c.status + (c.snoozed ? ' · snoozed' : '')
+  const detail = 'Every ' + c.interval_days + ' d · about ' + c.minutes + ' min · ' + c.status + (c.snoozed ? ' · snoozed' : '')
     + (c.how_to || c.done_when ? '' : ' · no help yet');
   main.append(top, el('div', 'chore-meta', detail));
 
@@ -117,6 +117,7 @@ function startEdit(c) {
   $('category').disabled = true;
   $('name').value = c.name;
   $('interval').value = c.interval_days;
+  $('minutes').value = c.minutes;
   $('last-done').value = c.last_done;
   $('description').value = c.description;
   $('how-to').value = c.how_to;
@@ -148,6 +149,7 @@ $('chore-form').addEventListener('submit', async e => {
   const body = {
     name: $('name').value.trim(),
     interval_days: Number($('interval').value),
+    minutes: Number($('minutes').value),
     description: $('description').value.trim(),
     how_to: $('how-to').value.trim(),
     done_when: $('done-when').value.trim(),
@@ -184,6 +186,83 @@ async function removeChore(c) {
   }
 }
 
+// --- Notifications -----------------------------------------------------------------------
+
+function b64urlToBytes(text) {
+  const padded = text + '='.repeat((4 - (text.length % 4)) % 4);
+  const raw = atob(padded.replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(raw, ch => ch.charCodeAt(0));
+}
+
+// Push needs HTTPS and, on iPhone, the app opened from the home screen.
+async function pushRegistration() {
+  if (!window.isSecureContext || !('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+  await navigator.serviceWorker.register('/sw.js');
+  return navigator.serviceWorker.ready;
+}
+
+async function showPushState() {
+  const reg = await pushRegistration();
+  if (!reg) {
+    $('push-on').disabled = true;
+    flash('push-msg', 'Open APT-OBD from your home screen (the https address) to turn notifications on.');
+    return;
+  }
+  const sub = await reg.pushManager.getSubscription();
+  $('push-on').hidden = Boolean(sub);
+  $('push-test').hidden = !sub;
+  $('push-off').hidden = !sub;
+  if (Notification.permission === 'denied') {
+    flash('push-msg', 'Blocked: allow notifications for APT-OBD in iPhone Settings > Notifications.', true);
+  } else {
+    flash('push-msg', sub ? 'On for this device.' : '');
+  }
+}
+
+$('push-on').addEventListener('click', async () => {
+  try {
+    // iOS only shows the permission prompt in direct response to a tap, so ask first.
+    if ((await Notification.requestPermission()) !== 'granted') {
+      flash('push-msg', 'Notifications were not allowed.', true);
+      return;
+    }
+    const reg = await pushRegistration();
+    const { public_key } = await api('/push/key');
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: b64urlToBytes(public_key),
+    });
+    await api('/push/subscribe', 'POST', sub.toJSON());
+    await showPushState();
+  } catch (err) {
+    flash('push-msg', 'Could not turn on: ' + err.message, true);
+  }
+});
+
+$('push-test').addEventListener('click', async () => {
+  try {
+    const r = await api('/push/test', 'POST');
+    flash('push-msg', r.sent ? 'Test sent. It should arrive in a few seconds.' : 'Test failed to send.', !r.sent);
+  } catch (err) {
+    flash('push-msg', err.message, true);
+  }
+});
+
+$('push-off').addEventListener('click', async () => {
+  try {
+    const reg = await pushRegistration();
+    const sub = reg && (await reg.pushManager.getSubscription());
+    if (sub) {
+      await api('/push/unsubscribe', 'POST', { endpoint: sub.endpoint });
+      await sub.unsubscribe();
+    }
+    await showPushState();
+    flash('push-msg', 'Off for this device.');
+  } catch (err) {
+    flash('push-msg', err.message, true);
+  }
+});
+
 // --- Start ---------------------------------------------------------------------------------
 
 async function init() {
@@ -196,6 +275,7 @@ async function init() {
 }
 
 init().catch(err => flash('chore-msg', 'Could not reach the unit: ' + err.message, true));
+showPushState().catch(err => flash('push-msg', err.message, true));
 
 // Offline app shell for the home-screen app; browsers only allow this over HTTPS.
 if ('serviceWorker' in navigator && window.isSecureContext) {
