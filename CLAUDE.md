@@ -7,6 +7,8 @@ the CHK APT lamp. Self-hosted on a Raspberry Pi; later phases add IoT sensors th
 chores automatically.
 
 - [docs/PLAN.md](docs/PLAN.md): roadmap, code/state rules, data model, API, current milestone.
+- [docs/PANEL.md](docs/PANEL.md): the Pi's own 3.5" touch panel (kiosk on `/?panel`), in
+  addition to the website.
 - [docs/SENSORS.md](docs/SENSORS.md): **next phase**: ESP32 sensors. Current state, decisions, parts, design.
 - [prototype/](prototype/README.md): the original design reference for the look (colours,
   fonts, pixel screen, screen names). It is a starting point, not a spec.
@@ -21,6 +23,9 @@ piece of work.
 
 - Primary target: the home-screen app on an iPhone 17 / 17 Pro (402 x 874 pt), opened from
   Chrome or Safari. Check layouts at that size first; desktop is secondary.
+- Second target: the Pi's 3.5" touch panel, 320 x 480 portrait, via `/?panel`
+  (`.panel` styles at the end of `scantool.css`). Check changes there too; it redraws over
+  SPI at a few frames a second, so avoid animations.
 - The scanner fills the whole phone screen. Every screen is the same size; long content
   scrolls inside the screen, never the page.
 - Full height comes from `fitScreen()` in `scantool.js` setting `--app-height` on `<html>`:

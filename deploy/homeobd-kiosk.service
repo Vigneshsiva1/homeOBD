@@ -1,0 +1,18 @@
+# Shows the scan tool full screen on the Pi's 3.5" SPI touch panel (ILI9486 + XPT2046).
+# Installed by deploy/install-kiosk.sh; edit here and re-run it. Needs the panel overlay in
+# /boot/firmware/config.txt (see docs/PANEL.md).
+[Unit]
+Description=homeOBD kiosk on the 3.5in touch panel
+Wants=homeobd.service
+After=homeobd.service systemd-user-sessions.service
+ConditionPathExists=/dev/fb-panel
+
+[Service]
+Type=simple
+# X on tty7 so the boot console on tty1 is left alone; FRAMEBUFFER is the panel's /dev/fbN.
+ExecStart=/bin/sh -c 'FRAMEBUFFER=$(readlink -f /dev/fb-panel) exec /usr/bin/xinit /root/homeOBD/deploy/kiosk-session.sh -- :0 vt7 -nocursor -nolisten tcp -config homeobd-panel.conf'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target

@@ -297,6 +297,10 @@ To restore: `systemctl stop homeobd`, copy a backup over `data/homeobd.db` (and 
 - Seasonal intervals (e.g. plants and fertilizing less often in winter).
 - Freeze frame "Set on" = the day the chore actually went overdue.
 - Maybe: sensor readings on Live data (waits for Phase 2).
+- Pi touch panel (2026-10-26): the scan tool also shows full screen on a 3.5" SPI display
+  (ILI9486 + XPT2046) on the Pi itself, in addition to the website. Xorg on the fbtft
+  framebuffer + `surf` open `/?panel` (scanner screen only, no device body or Setup link);
+  see [PANEL.md](PANEL.md).
 
 Decisions recorded: homeOBD stays on the Pi; no off-Pi copy of its backups; appliances are
 switched by hand (homeOBD raises the code); automation rules live in homeOBD, not Home

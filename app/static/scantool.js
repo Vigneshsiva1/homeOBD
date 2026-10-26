@@ -12,6 +12,8 @@ function fitScreen() {
 }
 fitScreen();
 window.addEventListener('resize', fitScreen);
+// The Pi's own 3.5" touch panel opens /?panel (deploy/homeobd-kiosk.service): the screen fills the panel.
+if (new URLSearchParams(location.search).has('panel')) document.documentElement.classList.add('panel');
 window.addEventListener('orientationchange', fitScreen);
 
 const MENU = [

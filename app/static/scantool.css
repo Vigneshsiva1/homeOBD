@@ -208,3 +208,15 @@ main {
   user-select: none;
 }
 .row.sel { background: var(--sel-bg); color: var(--sel-ink); }
+
+/* The Pi's 3.5" touch panel (/?panel, 320 x 480): the panel is the scanner screen, so the
+   device body, cable and Setup link go (Setup needs a keyboard; use it from a phone). */
+.panel main { padding: 0; }
+.panel .device-wrap { max-width: none; }
+.panel .cable, .panel .plug, .panel .brand { display: none; }
+.panel .device, .panel .bezel { padding: 0; border: 0; border-radius: 0; background: none; }
+.panel .screen { border-radius: 0; }
+.panel, .panel * { cursor: none; }
+/* A shorter footer lets the whole diagnostic menu fit on the 480 px panel without scrolling. */
+.panel .screen-foot { height: 54px; padding-top: 5px; padding-bottom: 5px; }
+.panel .screen-body { padding: 4px 0; }
