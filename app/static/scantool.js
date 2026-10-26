@@ -261,8 +261,8 @@ function textLines(text) {
 }
 
 function view() {
-  // keys: on-screen soft keys [label, action]; null means a BACK key wherever EXIT goes somewhere.
-  const v = { title: '', lines: [], pairs: [], rows: [], foot: '', keys: null, bar: null };
+  // keys: footer action buttons [label, action]. Back lives in the title bar (see render).
+  const v = { title: '', lines: [], pairs: [], rows: [], foot: '', keys: [], bar: null };
   const kv = (k, val) => v.pairs.push([k, String(val)]);
   const reading = () => { v.lines = ['Reading...']; };
   const codeRows = key => data.codes.map((c, i) => ({
@@ -294,6 +294,7 @@ function view() {
       break;
     case 'codes':
       v.title = 'Read codes';
+      v.foot = 'Tap a code';
       if (!data.codes.length) v.lines = ['No codes found.', 'Apartment is healthy.'];
       else {
         v.rows = codeRows('codes');
@@ -317,6 +318,7 @@ function view() {
     }
     case 'manual':
       v.title = 'Help';
+      v.foot = 'Tap a chore';
       if (!data.chores.length) v.lines = ['Reading...'];
       else {
         v.rows = data.chores.map((c, i) => ({
@@ -383,6 +385,7 @@ function view() {
     }
     case 'freezeList':
       v.title = 'Freeze frame';
+      v.foot = 'Tap a code';
       if (!data.codes.length) v.lines = ['No frames stored.'];
       else {
         v.rows = codeRows('freezeList');
@@ -454,15 +457,16 @@ function render() {
   $('screen').className = 'screen theme-' + data.theme;
   $('title').textContent = v.title;
   $('lamp').hidden = !data.lamp;
-  const keys = v.keys ?? (BACK[s.screen] || s.screen === 'help' ? [['BACK', 'exit']] : []);
-  if (keys.length) {
-    $('foot').replaceChildren(...keys.map(([label, action]) => {
+  $('back').hidden = !(BACK[s.screen] || s.screen === 'help');
+  if (v.keys.length) {
+    $('foot').replaceChildren(...v.keys.map(([label, action]) => {
       const b = el('button', 'softkey', label);
       b.type = 'button';
       b.addEventListener('click', action === 'enter' ? enter : exit);
       return b;
     }));
   } else {
+    $('foot').replaceChildren();
     $('foot').textContent = v.foot;
   }
 
@@ -494,6 +498,8 @@ function render() {
 
 // --- Wiring --------------------------------------------------------------------------------
 
+
+$('back').addEventListener('click', exit);
 
 document.addEventListener('keydown', e => {
   if (e.altKey || e.ctrlKey || e.metaKey) return;

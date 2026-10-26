@@ -13,11 +13,13 @@ The design reference is the prototype in [`prototype/`](../prototype/README.md);
 ## The scan-tool UI (from the prototype)
 
 A single device-shaped panel: header "APT-OBD · Maintenance scanner", a pixel-font screen
-with a title bar and a **CHK APT** warning lamp. The screen is touch-only (the prototype's
-▲/▼/ENTER/EXIT buttons were removed on 2026-10-26): tap a row to open it, and the footer
-shows on-screen soft keys such as **BACK**, **YES**/**NO**, **ERASE**/**CANCEL**, **CONTINUE**.
-The screen has a fixed height that fills the phone; long lists scroll inside it. Arrow keys,
-Enter and Escape still work on a computer.
+with a title bar and a **CHK APT** warning lamp. Since 2026-10-26 it follows iOS conventions
+(see the UI rules in `CLAUDE.md`): touch-only (the prototype's ▲/▼/ENTER/EXIT buttons are
+gone), tap a row to open it, **‹ Back** at the left of the title bar, and a fixed-height footer
+with iOS-style action buttons (**YES**/**NO**, **ERASE**/**CANCEL**, **CONTINUE**, **SKIP**) or
+a hint. The device fills the whole phone screen, every screen is the same size, and long lists
+scroll inside the screen. Setup is a gear link in the brand row. Arrow keys, Enter and Escape
+still work on a computer.
 
 Screen colour themes: **classic** (blue on light grey), **amber** (amber on black),
 **green** (LCD green). Fonts: **Chakra Petch** 500/600 for the device body and **VT323** for

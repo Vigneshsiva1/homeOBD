@@ -1,53 +1,78 @@
-/* Scan-tool page. Measurements and colours follow prototype/template.html. */
+/* Scan-tool page. Colours and fonts follow prototype/template.html; layout and controls follow
+   iOS conventions: the device fills the whole phone screen, and every screen is the same size.
+   Everything uses the app's own fonts: VT323 on the screen, Chakra Petch on the device. */
 /* Quick repeated taps on the screen must not trigger iOS double-tap zoom; pinch zoom still works. */
-html { touch-action: manipulation; }
-body { margin: 0; background: #121315; }
+html { touch-action: manipulation; height: 100%; }
+body { margin: 0; height: 100%; overflow: hidden; background: #121315; }
 a { color: #f2a33a; }
-a:hover { color: #ffc46e; }
 
+/* Full-height column. With viewport-fit=cover the page runs under the status bar and home
+   indicator, so the padding adds the safe-area insets. */
 main {
-  min-height: 100vh;
+  /* Pinned to the screen edges: more reliable than 100vh/100dvh in an iOS home-screen app. */
+  position: fixed;
+  inset: 0;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  padding: 24px 16px 24px;
+  padding:
+    calc(env(safe-area-inset-top, 0px) + 6px)
+    max(12px, env(safe-area-inset-right, 0px))
+    calc(env(safe-area-inset-bottom, 0px) + 8px)
+    max(12px, env(safe-area-inset-left, 0px));
   font-family: 'Chakra Petch', system-ui, sans-serif;
 }
-.device-wrap { width: 100%; max-width: 440px; display: flex; flex-direction: column; align-items: center; }
-.cable { width: 14px; height: 26px; background: #26282c; }
-.plug { width: 72px; height: 18px; background: #26282c; border-radius: 10px 10px 0 0; }
+.device-wrap { width: 100%; max-width: 440px; display: flex; flex-direction: column; align-items: center; min-height: 0; }
+.cable { width: 14px; height: 10px; background: #26282c; flex-shrink: 0; }
+.plug { width: 72px; height: 14px; background: #26282c; border-radius: 10px 10px 0 0; flex-shrink: 0; }
 
 .device {
+  flex: 1;
+  min-height: 0;
   width: 100%;
   box-sizing: border-box;
   background: #1c1d20;
   border: 1px solid #2a2c30;
   border-radius: 28px;
-  padding: 20px 20px 26px;
+  padding: 10px 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 8px;
 }
-.brand { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 0 4px; }
+.brand { display: flex; align-items: center; gap: 12px; padding: 0 4px 0 8px; min-height: 44px; }
 .brand-name { font-size: 18px; font-weight: 600; letter-spacing: 0.08em; color: #f2f0ea; }
-.brand-sub { font-size: 13px; font-weight: 500; letter-spacing: 0.04em; color: #9a9ca3; }
-.bezel { background: #0b0c0e; border-radius: 12px; padding: 10px; }
+.brand-sub { flex: 1; font-size: 13px; font-weight: 500; letter-spacing: 0.04em; color: #9a9ca3; }
+.setup-link {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.setup-link svg { width: 18px; height: 18px; }
+@media (max-width: 480px) { .brand-sub { display: none; } }
+
+.bezel { flex: 1; min-height: 0; display: flex; background: #0b0c0e; border-radius: 14px; padding: 8px; }
 
 /* Screen themes */
 .theme-classic { --screen-bg: #e9eef4; --ink: #10223f; --head-bg: #2457b3; --head-ink: #ffffff; --sel-bg: #2457b3; --sel-ink: #ffffff; --dim: #4f6380; }
 .theme-amber   { --screen-bg: #140c02; --ink: #ffb340; --head-bg: #ffb340; --head-ink: #140c02; --sel-bg: #ffb340; --sel-ink: #140c02; --dim: #c98a2e; }
 .theme-green   { --screen-bg: #c4cfa1; --ink: #1f2a12; --head-bg: #1f2a12; --head-ink: #c4cfa1; --sel-bg: #1f2a12; --sel-ink: #c4cfa1; --dim: #3f5228; }
 
+/* The screen takes all the height the bezel has, on every page; long content scrolls inside. */
 .screen {
+  flex: 1;
+  min-height: 0;
   background: var(--screen-bg);
   color: var(--ink);
-  border-radius: 4px;
+  border-radius: 6px;
   font-family: 'VT323', ui-monospace, monospace;
-  /* Fixed height so every screen is the same size; long lists scroll inside the body. Fills the
-     phone below the brand row (the rest of the page takes about 235px). */
-  height: clamp(320px, calc(100vh - 240px), 680px);
-  height: clamp(320px, calc(100dvh - 240px), 680px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -55,18 +80,45 @@ main {
   user-select: none;
   -webkit-touch-callout: none; /* no copy/lookup menu on long press */
 }
+
+/* Title bar, laid out like an iOS navigation bar: back button, title, then the CHK APT lamp. */
 .screen-head {
+  flex-shrink: 0;
+  min-height: 48px;
   background: var(--head-bg);
   color: var(--head-ink);
-  padding: 3px 10px;
+  padding: 0 10px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   font-size: 24px;
   line-height: 1.25;
 }
+.screen-head .title { flex: 1; }
+.back {
+  appearance: none;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 44px;
+  min-height: 44px;
+  margin-left: -6px;
+  padding: 0 8px 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--head-ink);
+  font-family: 'VT323', ui-monospace, monospace;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.back svg { width: 11px; height: 19px; flex-shrink: 0; }
+.back:active { opacity: 0.4; }
+.back[hidden] { display: none; }
 .lamp {
+  flex-shrink: 0;
   background: #f2a33a;
   color: #1a1206;
   font-size: 18px;
@@ -76,51 +128,57 @@ main {
   white-space: nowrap;
 }
 .lamp[hidden] { display: none; }
+
 .screen-body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 8px 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
+
+/* Footer: the same height on every screen, holding either a hint or iOS-style action buttons. */
 .screen-foot {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  height: 64px;
   border-top: 2px solid var(--dim);
-  padding: 6px 10px;
-  min-height: 30px;
+  padding: 8px 10px;
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
   font-size: 18px;
   line-height: 1.25;
   color: var(--dim);
 }
-/* On-screen soft keys, like a scan tool's labelled function keys. */
 .softkey {
   appearance: none;
   flex: 1;
-  min-height: 40px;
+  min-height: 44px;
   margin: 0;
-  border: 2px solid var(--ink);
-  border-radius: 3px;
+  border: 0;
+  border-radius: 12px;
   background: var(--sel-bg);
   color: var(--sel-ink);
   font-family: 'VT323', ui-monospace, monospace;
-  font-size: 22px;
-  letter-spacing: 0.06em;
+  font-size: 24px;
+  letter-spacing: 0.04em;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.softkey + .softkey { background: transparent; color: var(--ink); }
-.softkey:active { filter: brightness(1.15); }
+/* A second key is the secondary action (NO, CANCEL): outlined instead of filled. */
+.softkey + .softkey { background: transparent; color: var(--sel-bg); box-shadow: inset 0 0 0 2px var(--sel-bg); }
+.softkey:active { opacity: 0.6; }
 
 .clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.line { padding: 0 10px; font-size: 22px; line-height: 1.2; }
-.bar { margin: 14px 10px 0; height: 18px; box-sizing: border-box; border: 2px solid var(--ink); padding: 2px; }
+.line { padding: 0 12px; font-size: 22px; line-height: 1.2; flex-shrink: 0; }
+.bar { margin: 14px 12px 0; height: 18px; box-sizing: border-box; border: 2px solid var(--ink); padding: 2px; flex-shrink: 0; }
 .bar > div { height: 100%; background: var(--ink); }
-.pair { display: flex; justify-content: space-between; gap: 12px; padding: 0 10px; font-size: 21px; line-height: 1.22; }
+.pair { display: flex; justify-content: space-between; gap: 12px; padding: 0 12px; font-size: 21px; line-height: 1.22; flex-shrink: 0; }
 .pair .k { color: var(--dim); }
 .pair .v { max-width: 60%; text-align: right; }
 .nowrap { white-space: nowrap; }
@@ -129,9 +187,9 @@ main {
   border: 0;
   margin: 0;
   width: 100%;
-  min-height: 40px;
+  min-height: 44px;
   flex-shrink: 0;
-  padding: 2px 10px;
+  padding: 2px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -148,5 +206,3 @@ main {
   user-select: none;
 }
 .row.sel { background: var(--sel-bg); color: var(--sel-ink); }
-
-.setup-link { margin-top: 18px; font-size: 14px; letter-spacing: 0.08em; }

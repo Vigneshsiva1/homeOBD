@@ -22,9 +22,35 @@ body {
 }
 a { color: var(--accent); }
 a:hover { color: #ffc46e; }
-main { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; display: flex; flex-direction: column; gap: 18px; }
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  /* viewport-fit=cover: clear the status bar, home indicator and side bars. */
+  padding:
+    calc(env(safe-area-inset-top, 0px) + 12px)
+    max(16px, env(safe-area-inset-right, 0px))
+    calc(env(safe-area-inset-bottom, 0px) + 48px)
+    max(16px, env(safe-area-inset-left, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
 
-.top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.top { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin-left: -4px;
+  padding: 0 8px 0 4px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.back-link svg { width: 12px; height: 21px; }
 h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: 0.08em; }
 h1 span { color: var(--dim); font-weight: 500; letter-spacing: 0.04em; }
 h2 { margin: 0 0 14px; font-size: 17px; font-weight: 600; letter-spacing: 0.06em; }

@@ -221,3 +221,9 @@ def test_home_screen_app_files(client):
     page = client.get("/").text
     assert 'rel="manifest"' in page and 'rel="apple-touch-icon"' in page
     assert client.get("/static/icons/apple-touch-icon.png").status_code == 200
+
+
+@pytest.mark.parametrize("path", ["/", "/setup", "/static/scantool.css", "/static/scantool.js", "/api/codes"])
+def test_responses_are_revalidated(client, path):
+    # iOS otherwise keeps serving stale CSS/JS after a deploy.
+    assert client.get(path).headers["cache-control"] == "no-cache"

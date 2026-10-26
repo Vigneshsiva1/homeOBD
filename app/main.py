@@ -55,6 +55,14 @@ def create_app(db_path: str | Path | None = None, tick: bool = True) -> FastAPI:
     app.include_router(router)
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
+    @app.middleware("http")
+    async def revalidate_everything(request, call_next):
+        # Without this, iOS guesses that pages and CSS are still fresh and keeps showing old
+        # versions after a deploy. no-cache = always check with the Pi (a cheap 304 when unchanged).
+        response = await call_next(request)
+        response.headers.setdefault("Cache-Control", "no-cache")
+        return response
+
     @app.get("/", include_in_schema=False)
     def scan_tool():
         return FileResponse(STATIC / "index.html")

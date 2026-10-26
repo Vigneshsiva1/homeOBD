@@ -3,7 +3,7 @@
 // /api/ requests are never cached: the scanner must always show live data.
 'use strict';
 
-const CACHE = 'apt-obd-v1';
+const CACHE = 'apt-obd-v3'; // bump to drop every cached copy on the next visit
 const SHELL = [
   '/',
   '/setup',
@@ -34,7 +34,7 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   if (event.request.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/')) return;
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: 'no-cache' }) // always check with the Pi, never the HTTP cache
       .then(response => {
         if (response.ok) {
           const copy = response.clone();
