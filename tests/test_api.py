@@ -227,3 +227,20 @@ def test_home_screen_app_files(client):
 def test_responses_are_revalidated(client, path):
     # iOS otherwise keeps serving stale CSS/JS after a deploy.
     assert client.get(path).headers["cache-control"] == "no-cache"
+
+
+def test_due_date(client):
+    c = client.get("/api/codes/B1004").json()  # every 14 d, last done 13 days ago
+    assert c["due"] == (date.today() + timedelta(days=1)).isoformat()
+    assert c["days_left"] == 1
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["celosia", "mint", "pilea", "schefflera", "palm", "bird-of-paradise", "setup-open", "setup-add", "setup-edit"],
+)
+def test_guide_pictures_are_served(client, name):
+    r = client.get(f"/static/pictures/{name}.svg")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("image/svg+xml")
+    assert "<title>" in r.text  # every picture describes itself for screen readers

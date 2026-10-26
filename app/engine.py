@@ -85,6 +85,10 @@ class Code:
         return int(self.code[1])
 
     @property
+    def due(self) -> date:
+        return self.last_done + timedelta(days=self.interval_days)
+
+    @property
     def status(self) -> str:
         return status_text(self.days_left)
 

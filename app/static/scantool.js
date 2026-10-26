@@ -26,9 +26,137 @@ const MENU = [
 ];
 const BACK = {
   codes: 'menu', erase: 'menu', live: 'menu', freezeList: 'menu', ready: 'menu', service: 'menu',
-  info: 'menu', manual: 'menu', detail: 'codes', confirm: 'detail', freeze: 'freezeList',
+  info: 'menu', manual: 'menu', guide: 'manual', detail: 'codes', confirm: 'detail', freeze: 'freezeList',
 };
 const DETAIL_ROWS = ['Mark done', 'Help'];
+// Generic illustrations shown in a plant chore's Help, matched by the chore's name.
+const PLANT_PICTURES = [
+  [/celosia/i, 'celosia', 'Plumed celosia'],
+  [/mint/i, 'mint', 'Mint'],
+  [/money plant|pilea/i, 'pilea', 'Chinese money plant'],
+  [/umbrella|schefflera/i, 'schefflera', 'Umbrella plant'],
+  [/palm/i, 'palm', 'Palm'],
+  [/bird of paradise/i, 'bird-of-paradise', 'Bird of paradise'],
+];
+
+function plantPicture(c) {
+  const match = PLANT_PICTURES.find(([re]) => re.test(c.name));
+  return match ? [{ img: '/static/pictures/' + match[1] + '.svg', alt: match[2] }] : [];
+}
+// Guide topics listed at the top of Help, before the chores. One string per screen line.
+const GUIDE = [
+  { title: 'How to use it', lines: [
+    'DAY TO DAY',
+    '1. A notification tells you when chores come up.',
+    '2. Open APT-OBD and tap Read codes.',
+    '3. Tap a code, then Help to see how to do it and what done looks like.',
+    '4. Do the chore, then Mark done and YES. The code clears and its timer restarts.',
+    '5. Can\'t get to it today? Erase codes hides due chores for 24 h.',
+    ' ',
+    'NOW AND THEN',
+    'Live data: your health % and streak.',
+    'Service due: maintenance coming up.',
+    'Setup: add or edit chores, how often, how long they take, and notifications.',
+  ] },
+  { title: 'Add & edit chores', lines: [
+    'ADD A CHORE',
+    { img: '/static/pictures/setup-open.svg', alt: 'Tap the Setup gear at the top right' },
+    '1. Tap Setup (the gear) at the top right.',
+    { img: '/static/pictures/setup-add.svg', alt: 'The Add chore form with numbered steps' },
+    '1. Pick the zone and type, and name the chore.',
+    '2. Set how often (days) and when you last did it. Blank means today.',
+    '3. Set how long it takes. 1 h or more means weekend reminders.',
+    '4. Optional: steps under How to do it (one per line) and Done when.',
+    '5. Tap Add chore. It gets the next free code, like K0005.',
+    '\u00a0',
+    'EDIT OR DELETE',
+    { img: '/static/pictures/setup-edit.svg', alt: 'The chore list with Edit and Delete buttons' },
+    '1. Find the chore under Chores and tap Edit.',
+    '2. Change anything except zone and type (they make up the code), then Save changes.',
+    '3. Delete removes the chore and its history.',
+    '\u00a0',
+    'Tap ‹ Scanner at the top to come back.',
+  ] },
+  { title: 'Codes & states', lines: [
+    'Every chore is a code like K0001.',
+    ' ',
+    'LETTER = ZONE',
+    'K Kitchen, B Bath, L Living, R Bedroom, U Utility, G Whole apt.',
+    ' ',
+    'FIRST DIGIT = TYPE',
+    '0 routine, 1 deep clean, 2 maintenance.',
+    ' ',
+    'STATES',
+    'PEND: due today or soon.',
+    'CONF: overdue.',
+    'PERM: overdue by a full interval (at least 7 d). Erase codes can\'t hide it.',
+    'Chores that aren\'t due don\'t show in Read codes.',
+  ] },
+  { title: 'CHK APT lamp', lines: [
+    'The amber CHK APT light in the title bar, like a check-engine light.',
+    ' ',
+    'On: at least one chore is overdue (CONF or PERM).',
+    'Off: nothing overdue, or everything overdue is snoozed with Erase codes.',
+    'PERM codes keep it on until they are done.',
+  ] },
+  { title: 'Notifications', lines: [
+    'Quick chores, every 1-2 days and under 1 h: 8 pm on the day they are due.',
+    'Other chores under 1 h: 8 am, and again at 6 pm on weekdays if still open.',
+    'Chores of 1 h or more: weekends only, 8 am and 6 pm.',
+    ' ',
+    'They repeat in their slot each day until you mark the chore done.',
+    'Erased (snoozed) chores stay quiet for 24 h.',
+    'Turn on, test or off in Setup. Change how long a chore takes there too.',
+  ] },
+  { title: 'Read codes', lines: [
+    'Every chore that is due or overdue, worst first: PERM, then CONF, then PEND.',
+    ' ',
+    'Tap a code for its zone, state, interval, time it takes and last done date.',
+    'Help: steps and what done looks like.',
+    'Mark done: clears the code and restarts its timer.',
+  ] },
+  { title: 'Erase codes', lines: [
+    'Snoozes every due code except PERM for 24 h.',
+    ' ',
+    'Snoozed codes leave Read codes, stop notifying and turn the lamp off unless a PERM code is left.',
+    ' ',
+    'Nothing is marked done: health does not change and the codes come back after 24 h.',
+  ] },
+  { title: 'Live data', lines: [
+    'Health: share of all chores that are not overdue.',
+    'Overdue / Pending codes: how many are CONF+PERM / PEND.',
+    'Check apt lamp: ON or OFF.',
+    'Streak: days in a row that ended with nothing overdue. Best streak is your record.',
+    'Next service: the soonest maintenance chore.',
+    'Tasks tracked: how many chores there are.',
+  ] },
+  { title: 'Freeze frame', lines: [
+    'Like a car\'s freeze frame: a snapshot taken when a code went overdue.',
+    ' ',
+    'Set on: when it went overdue.',
+    'Health at set: your health % at that moment.',
+    'Streak at set: the streak it broke.',
+    ' ',
+    'Only overdue codes have one; pending codes say "No freeze frame". It clears when you mark the chore done.',
+  ] },
+  { title: 'Readiness', lines: [
+    'A check per zone, like a car\'s emissions readiness.',
+    ' ',
+    'RDY: nothing in that zone is overdue or snoozed.',
+    'INC (incomplete): something there is overdue or snoozed.',
+    ' ',
+    'Aim for 6 of 6 zones ready.',
+  ] },
+  { title: 'Service due', lines: [
+    'Maintenance chores (codes with first digit 2): filters, updates, backups, replacements.',
+    ' ',
+    'Sorted by days left. OVR means overdue by that many days.',
+  ] },
+  { title: 'Unit info', lines: [
+    'About this scanner: its unit ID, software version, the Raspberry Pi it runs on, and how many zones and chores it tracks.',
+    'Change the unit ID and screen colours in Setup.',
+  ] },
+];
 const FULL = { PERM: 'Permanent', CONF: 'Confirmed', PEND: 'Pending' };
 const THEMES = ['classic', 'amber', 'green'];
 const BOOT_TICK_MS = 140;
@@ -158,7 +286,7 @@ function erasable() {
 
 function move(d) {
   if (!(s.screen in s.idx)) return;
-  const n = { menu: MENU.length, detail: DETAIL_ROWS.length, manual: data.chores.length }[s.screen]
+  const n = { menu: MENU.length, detail: DETAIL_ROWS.length, manual: GUIDE.length + data.chores.length }[s.screen]
     ?? data.codes.length;
   if (!n) return;
   s.idx[s.screen] = (s.idx[s.screen] + d + n) % n;
@@ -190,7 +318,11 @@ function enter() {
       s.helpRet = 'detail';
       return go(s.idx.detail === 0 ? 'confirm' : 'help');
     case 'manual': {
-      const c = data.chores[s.idx.manual];
+      if (s.idx.manual < GUIDE.length) {
+        s.guide = s.idx.manual;
+        return go('guide');
+      }
+      const c = data.chores[s.idx.manual - GUIDE.length];
       if (!c) return;
       s.sel = c.code;
       s.helpRet = 'manual';
@@ -267,6 +399,14 @@ function days(n) {
   return n + ' d';
 }
 
+// "Next due Thu, Oct 29 (in 3 d)", "Due today" or "Was due Sat, Oct 24 (2 d ago)".
+function dueText(c) {
+  const when = new Date(c.due + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  if (c.days_left > 0) return 'Next due ' + when + ' (in ' + days(c.days_left) + ')';
+  if (c.days_left === 0) return 'Due today';
+  return 'Was due ' + when + ' (' + days(-c.days_left) + ' ago)';
+}
+
 const SPACER = ' '; // an empty screen line that still takes up height
 
 function textLines(text) {
@@ -335,11 +475,21 @@ function view() {
       v.foot = 'Tap a chore';
       if (!data.chores.length) v.lines = ['Reading...'];
       else {
-        v.rows = data.chores.map((c, i) => ({
-          label: c.code + ' ' + c.name, tag: days(c.interval_days), sel: i === s.idx.manual, i,
-        }));
+        v.rows = [
+          ...GUIDE.map((g, i) => ({ label: g.title, tag: 'GUIDE', sel: i === s.idx.manual, i })),
+          ...data.chores.map((c, j) => {
+            const i = GUIDE.length + j;
+            return { label: c.code + ' ' + c.name, tag: days(c.interval_days), sel: i === s.idx.manual, i };
+          }),
+        ];
       }
       break;
+    case 'guide': {
+      const g = GUIDE[s.guide] || GUIDE[0];
+      v.title = g.title;
+      v.lines = g.lines;
+      break;
+    }
     case 'help': {
       const c = chore(s.sel);
       v.title = 'Help ' + s.sel;
@@ -347,7 +497,7 @@ function view() {
         v.lines = ['No help yet.', 'Add it on the Setup page.'];
         break;
       }
-      v.lines = [c.name, 'Takes about ' + c.minutes + ' min', SPACER, ...textLines(c.how_to)];
+      v.lines = [c.name, ...plantPicture(c), dueText(c), 'Takes about ' + c.minutes + ' min', SPACER, ...textLines(c.how_to)];
       if (c.done_when) {
         if (c.how_to) v.lines.push(SPACER);
         v.lines.push('DONE WHEN', ...textLines(c.done_when));
@@ -484,7 +634,13 @@ function render() {
     $('foot').textContent = v.foot;
   }
 
-  const nodes = v.lines.map(t => el('div', 'line', t));
+  const nodes = v.lines.map(t => {
+    if (typeof t === 'string') return el('div', 'line', t);
+    const img = el('img', 'pic');
+    img.src = t.img;
+    img.alt = t.alt;
+    return img;
+  });
   if (v.bar != null) {
     const bar = el('div', 'bar');
     const fill = el('div');

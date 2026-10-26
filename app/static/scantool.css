@@ -179,6 +179,7 @@ main {
 .line { padding: 0 12px; font-size: 22px; line-height: 1.2; flex-shrink: 0; }
 .bar { margin: 14px 12px 0; height: 18px; box-sizing: border-box; border: 2px solid var(--ink); padding: 2px; flex-shrink: 0; }
 .bar > div { height: 100%; background: var(--ink); }
+.pic { display: block; flex-shrink: 0; width: calc(100% - 24px); max-width: 360px; height: auto; margin: 6px 12px; border-radius: 8px; }
 .pair { display: flex; justify-content: space-between; gap: 12px; padding: 0 12px; font-size: 21px; line-height: 1.22; flex-shrink: 0; }
 .pair .k { color: var(--dim); }
 .pair .v { max-width: 60%; text-align: right; }

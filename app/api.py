@@ -45,6 +45,7 @@ def code_json(c: engine.Code) -> dict:
         "status": c.status,
         "interval_days": c.interval_days,
         "last_done": c.last_done.isoformat(),
+        "due": c.due.isoformat(),
         "days_left": c.days_left,
         "snoozed": c.snoozed,
     }

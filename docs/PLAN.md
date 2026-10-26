@@ -38,7 +38,7 @@ the screen.
 | Readiness     | Each zone RDY or INC, plus "N of 6 zones ready".                                             |
 | Service due   | Maintenance items (category 2) sorted by days left; overdue shows "OVR n d".                 |
 | Unit info     | Unit ID, software version, ECU (Raspberry Pi 4), interface (Web, Wi-Fi), zone and task counts. |
-| Help          | Every chore (due or not) with its interval; ENTER shows its steps and DONE WHEN. |
+| Help          | Guide topics first (daily use, add & edit chores, codes, lamp, notifications, each menu screen), then every chore with next due date, time, steps and DONE WHEN; plant chores show a drawn illustration (`app/static/pictures/`, no personal photos since the repo is public). |
 
 Adding and editing chores needs text entry, which the scanner screen isn't built for, so it goes on a
 separate plain **Setup page** (`/setup`). The theme is also chosen there.
