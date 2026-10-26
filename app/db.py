@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS chores (
     code          TEXT NOT NULL UNIQUE,
     name          TEXT NOT NULL,
     description   TEXT NOT NULL DEFAULT '',
+    how_to        TEXT NOT NULL DEFAULT '',
+    done_when     TEXT NOT NULL DEFAULT '',
     interval_days INTEGER NOT NULL CHECK (interval_days > 0),
     last_done_at  TEXT NOT NULL,
     snoozed_until TEXT,
@@ -42,6 +44,13 @@ CREATE TABLE IF NOT EXISTS settings (
 """
 
 DEFAULT_SETTINGS = {"unit_id": "APT-01", "theme": "classic"}
+
+# Columns added after the first release: (table, column, definition). Applied on startup to
+# databases created before the column existed.
+ADDED_COLUMNS = [
+    ("chores", "how_to", "TEXT NOT NULL DEFAULT ''"),
+    ("chores", "done_when", "TEXT NOT NULL DEFAULT ''"),
+]
 
 # (code, name, interval_days, days since last done). The offsets reproduce the prototype's
 # demo state: K2002 PERM, L0002 and K0001 CONF, B1004 and U2001 PEND, everything else OK.
@@ -81,6 +90,10 @@ def init(path: str | Path, now: datetime) -> None:
     with connect(path) as conn:
         conn.execute("PRAGMA journal_mode = WAL")
         conn.executescript(SCHEMA)
+        for table, column, definition in ADDED_COLUMNS:
+            existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+            if column not in existing:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
         conn.executemany(
             "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", DEFAULT_SETTINGS.items()
         )

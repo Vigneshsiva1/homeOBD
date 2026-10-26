@@ -91,7 +91,8 @@ function choreItem(c) {
   const main = el('div');
   const top = el('div', 'chore-top');
   top.append(el('span', 'code', c.code), el('span', 'name', c.name));
-  const detail = 'Every ' + c.interval_days + ' d · ' + c.status + (c.snoozed ? ' · snoozed' : '');
+  const detail = 'Every ' + c.interval_days + ' d · ' + c.status + (c.snoozed ? ' · snoozed' : '')
+    + (c.how_to || c.done_when ? '' : ' · no help yet');
   main.append(top, el('div', 'chore-meta', detail));
 
   const actions = el('div', 'actions');
@@ -118,6 +119,8 @@ function startEdit(c) {
   $('interval').value = c.interval_days;
   $('last-done').value = c.last_done;
   $('description').value = c.description;
+  $('how-to').value = c.how_to;
+  $('done-when').value = c.done_when;
   $('save-chore').textContent = 'Save changes';
   $('cancel-edit').hidden = false;
   flash('chore-msg', '');
@@ -127,7 +130,7 @@ function startEdit(c) {
 
 function resetForm() {
   editing = null;
-  $('chore-form').reset();
+  $('chore-form').reset(); // clears every field, the help text included
   $('zone').disabled = false;
   $('category').disabled = false;
   $('form-title').textContent = 'Add chore';
@@ -146,6 +149,8 @@ $('chore-form').addEventListener('submit', async e => {
     name: $('name').value.trim(),
     interval_days: Number($('interval').value),
     description: $('description').value.trim(),
+    how_to: $('how-to').value.trim(),
+    done_when: $('done-when').value.trim(),
   };
   const lastDone = $('last-done').value;
   try {

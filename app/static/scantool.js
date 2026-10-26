@@ -12,8 +12,9 @@ const MENU = [
 ];
 const BACK = {
   codes: 'menu', erase: 'menu', live: 'menu', freezeList: 'menu', ready: 'menu', service: 'menu',
-  info: 'menu', detail: 'codes', confirm: 'detail', freeze: 'freezeList',
+  info: 'menu', detail: 'codes', confirm: 'detail', help: 'detail', freeze: 'freezeList',
 };
+const DETAIL_ROWS = ['Mark done', 'Help'];
 const FULL = { PERM: 'Permanent', CONF: 'Confirmed', PEND: 'Pending' };
 const THEMES = ['classic', 'amber', 'green'];
 const MOVE_FOOT = '▲▼ move  ENTER view  EXIT back';
@@ -23,7 +24,7 @@ const REFRESH_MS = 60000;
 // UI state. `idx` holds the cursor for each list screen.
 const s = {
   screen: 'boot', progress: 0, booted: false, bootError: false, skip: false,
-  idx: { menu: 0, codes: 0, freezeList: 0 },
+  idx: { menu: 0, codes: 0, freezeList: 0, detail: 0 },
   sel: null, msg: null, busy: false,
 };
 // Last data read from the unit.
@@ -137,7 +138,7 @@ function erasable() {
 
 function move(d) {
   if (!(s.screen in s.idx)) return;
-  const n = s.screen === 'menu' ? MENU.length : data.codes.length;
+  const n = { menu: MENU.length, detail: DETAIL_ROWS.length }[s.screen] ?? data.codes.length;
   if (!n) return;
   s.idx[s.screen] = (s.idx[s.screen] + d + n) % n;
   render();
@@ -160,10 +161,14 @@ function enter() {
       const c = data.codes[s.idx[s.screen]];
       if (!c) return;
       s.sel = c.code;
+      s.idx.detail = 0;
       return go(s.screen === 'codes' ? 'detail' : 'freeze');
     }
     case 'detail':
-      return selected() ? go('confirm') : go('codes');
+      if (!selected()) return go('codes');
+      return go(s.idx.detail === 0 ? 'confirm' : 'help');
+    case 'help':
+      return go('detail');
     case 'confirm':
       return busy(markDone);
     case 'msg':
@@ -232,6 +237,12 @@ function days(n) {
   return n + ' d';
 }
 
+const SPACER = ' '; // an empty screen line that still takes up height
+
+function textLines(text) {
+  return (text || '').split('\n').map(t => t.trim()).filter(Boolean);
+}
+
 function view() {
   const v = { title: '', lines: [], pairs: [], rows: [], foot: 'EXIT back', bar: null };
   const kv = (k, val) => v.pairs.push([k, String(val)]);
@@ -284,14 +295,34 @@ function view() {
       kv('Status', c.status);
       kv('Interval', days(c.interval_days));
       kv('Last done', fmtDate(c.last_done));
-      v.foot = 'ENTER mark done  EXIT back';
+      v.rows = DETAIL_ROWS.map((label, i) => ({ label, tag: '', sel: i === s.idx.detail, i }));
+      v.foot = '▲▼ move  ENTER select  EXIT back';
       break;
     }
-    case 'confirm':
+    case 'help': {
+      const c = selected();
+      v.title = 'Help ' + s.sel;
+      if (!c || !(c.how_to || c.done_when)) {
+        v.lines = ['No help yet.', 'Add it on the Setup page.'];
+        break;
+      }
+      v.lines = textLines(c.how_to);
+      if (c.done_when) {
+        if (v.lines.length) v.lines.push(SPACER);
+        v.lines.push('DONE WHEN', ...textLines(c.done_when));
+      }
+      v.foot = 'ENTER or EXIT back';
+      break;
+    }
+    case 'confirm': {
+      const c = selected();
       v.title = 'Mark done';
-      v.lines = ['Mark ' + s.sel + ' done?', 'Only if the chore', 'is really finished.'];
+      v.lines = c && c.done_when
+        ? ['Mark ' + s.sel + ' done?', SPACER, 'Done when:', ...textLines(c.done_when)]
+        : ['Mark ' + s.sel + ' done?', 'Only if the chore', 'is really finished.'];
       v.foot = 'ENTER yes  EXIT no';
       break;
+    }
     case 'msg':
       v.title = s.msg.title;
       v.lines = s.msg.lines;

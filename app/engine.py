@@ -68,6 +68,8 @@ class Code:
     days_left: int
     state: str
     snoozed: bool
+    how_to: str = ""
+    done_when: str = ""
 
     @property
     def zone(self) -> str:
@@ -100,6 +102,8 @@ def evaluate(
     today: date,
     now: datetime,
     description: str = "",
+    how_to: str = "",
+    done_when: str = "",
 ) -> Code:
     left = days_left(last_done, interval_days, today)
     return Code(
@@ -111,6 +115,8 @@ def evaluate(
         days_left=left,
         state=state(left, interval_days),
         snoozed=snoozed_until is not None and snoozed_until > now,
+        how_to=how_to,
+        done_when=done_when,
     )
 
 

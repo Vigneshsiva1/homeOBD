@@ -26,6 +26,8 @@ def _to_code(row: sqlite3.Row, at: datetime) -> engine.Code:
         at.date(),
         at,
         row["description"],
+        row["how_to"],
+        row["done_when"],
     )
 
 
@@ -49,7 +51,8 @@ def streaks(conn: sqlite3.Connection, codes: list[engine.Code], at: datetime) ->
 
 
 def sync(conn: sqlite3.Connection, at: datetime) -> None:
-    """Record today's health for streaks and capture freeze frames for newly overdue codes."""
+    """Record today's health for streaks, capture freeze frames for newly overdue codes and
+    close the frames of codes that are no longer overdue."""
     codes = load_codes(conn, at)
     health = engine.health(codes)
     conn.execute(
@@ -61,7 +64,14 @@ def sync(conn: sqlite3.Connection, at: datetime) -> None:
     # The streak a code broke: the run that ended yesterday.
     streak_before = engine.current_streak(history(conn), at.date() - timedelta(days=1))
     for c in codes:
-        if engine.is_overdue(c.state):
+        if not engine.is_overdue(c.state):
+            # No longer overdue (e.g. its last-done date was edited): close any open frame.
+            conn.execute(
+                "UPDATE freeze_frames SET cleared_at = ? WHERE cleared_at IS NULL"
+                " AND chore_id = (SELECT id FROM chores WHERE code = ?)",
+                (at.isoformat(), c.code),
+            )
+        else:
             conn.execute(
                 "INSERT INTO freeze_frames (chore_id, set_at, health_at_set, streak_at_set)"
                 " SELECT id, ?, ?, ? FROM chores WHERE code = ? AND NOT EXISTS ("

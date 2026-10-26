@@ -33,6 +33,8 @@ def code_json(c: engine.Code) -> dict:
         "code": c.code,
         "name": c.name,
         "description": c.description,
+        "how_to": c.how_to,
+        "done_when": c.done_when,
         "zone": c.zone,
         "zone_name": c.zone_name,
         "category": c.category,
@@ -189,6 +191,8 @@ class ChoreIn(BaseModel):
     category: int | None = Field(None, ge=0, le=3)
     name: str = Field(min_length=1, max_length=60)
     description: str = Field("", max_length=500)
+    how_to: str = Field("", max_length=2000)
+    done_when: str = Field("", max_length=500)
     interval_days: int = Field(ge=1, le=3650)
     last_done: date | None = None
 
@@ -210,9 +214,18 @@ def create_chore(body: ChoreIn, conn: sqlite3.Connection = Conn):
     last_done = _done_timestamp(body.last_done, at) if body.last_done else at.isoformat()
     try:
         conn.execute(
-            "INSERT INTO chores (code, name, description, interval_days, last_done_at, created_at)"
-            " VALUES (?, ?, ?, ?, ?, ?)",
-            (code, body.name, body.description, body.interval_days, last_done, at.isoformat()),
+            "INSERT INTO chores (code, name, description, how_to, done_when, interval_days,"
+            " last_done_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                code,
+                body.name,
+                body.description,
+                body.how_to,
+                body.done_when,
+                body.interval_days,
+                last_done,
+                at.isoformat(),
+            ),
         )
     except sqlite3.IntegrityError:
         raise HTTPException(409, f"Code {code} already exists")
@@ -223,6 +236,8 @@ def create_chore(body: ChoreIn, conn: sqlite3.Connection = Conn):
 class ChorePatch(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=60)
     description: str | None = Field(None, max_length=500)
+    how_to: str | None = Field(None, max_length=2000)
+    done_when: str | None = Field(None, max_length=500)
     interval_days: int | None = Field(None, ge=1, le=3650)
     last_done: date | None = None
 

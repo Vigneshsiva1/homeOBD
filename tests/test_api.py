@@ -164,3 +164,45 @@ def test_fonts_are_served(client):
     r = client.get("/static/fonts/vt323-400-latin.woff2")
     assert r.status_code == 200
     assert r.content[:4] == b"wOF2"
+
+
+def test_help_fields_round_trip(client):
+    assert client.get("/api/codes/K0001").json()["how_to"] == ""
+    r = client.patch("/api/chores/K0001", json={"how_to": "1. Scrape\n2. Wash", "done_when": "Sink empty."})
+    assert (r.json()["how_to"], r.json()["done_when"]) == ("1. Scrape\n2. Wash", "Sink empty.")
+    r = client.post(
+        "/api/chores",
+        json={"zone": "B", "category": 0, "name": "Wash towels", "interval_days": 7, "how_to": "Hot wash.", "done_when": "Fresh towels out."},
+    )
+    assert (r.json()["how_to"], r.json()["done_when"]) == ("Hot wash.", "Fresh towels out.")
+
+
+def test_old_database_gains_help_columns(tmp_path):
+    import sqlite3
+    from datetime import datetime, timezone
+
+    from app import db
+
+    path = tmp_path / "old.db"
+    old_schema = db.SCHEMA.replace("    how_to        TEXT NOT NULL DEFAULT '',\n", "").replace(
+        "    done_when     TEXT NOT NULL DEFAULT '',\n", ""
+    )
+    conn = sqlite3.connect(path)
+    conn.executescript(old_schema)
+    conn.execute(
+        "INSERT INTO chores (code, name, interval_days, last_done_at, created_at) VALUES ('K0001', 'Dishes', 1, ?, ?)",
+        ("2026-10-01T12:00:00+00:00", "2026-10-01T12:00:00+00:00"),
+    )
+    conn.commit()
+    conn.close()
+
+    db.init(path, datetime(2026, 10, 2, tzinfo=timezone.utc))
+    conn = db.connect(path)
+    row = conn.execute("SELECT name, how_to, done_when FROM chores WHERE code = 'K0001'").fetchone()
+    assert (row["name"], row["how_to"], row["done_when"]) == ("Dishes", "", "")
+
+
+def test_editing_last_done_closes_freeze_frame(client):
+    assert client.get("/api/codes/K0001/freeze").json()["frame"] is not None
+    client.patch("/api/chores/K0001", json={"last_done": date.today().isoformat()})
+    assert client.get("/api/codes/K0001/freeze").json()["frame"] is None

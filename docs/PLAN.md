@@ -25,7 +25,8 @@ the screen.
 | Boot          | "Software v1.0 / Linking to unit APT-01" with a progress bar; ENTER skips.                   |
 | Diagnostic menu | The seven entries below; "Read codes" shows the active-code count.                       |
 | Read codes    | Active codes, worst first (PERM → CONF → PEND). ENTER → detail → "Mark done?" → cleared.     |
-| Code detail   | Zone, state, status ("Overdue 3 d" / "Due in 1 d"), interval, last done.                     |
+| Code detail   | Zone, state, status ("Overdue 3 d" / "Due in 1 d"), interval, last done; rows **Mark done** and **Help**. |
+| Help          | The chore's steps, then **DONE WHEN** (what finished looks like). The "Mark done?" screen repeats DONE WHEN. |
 | Erase codes   | Snoozes every active code that is not PERM for 24 h. Health is unchanged: the chores still wait. |
 | Live data     | Health %, overdue codes, pending codes, lamp ON/OFF, streak, best streak, next service, tasks tracked. |
 | Freeze frame  | Per code: when it went overdue, health and streak at that moment, last done, interval.        |
@@ -126,6 +127,7 @@ at local midnight.
 
 ```
 chores         (id, code UNIQUE, zone, name, description,
+                how_to, done_when,                     -- Help screen: steps, finished state
                 interval_days, last_done_at, snoozed_until,
                 trigger_type DEFAULT 'schedule',      -- 'sensor' reserved for Phase 2
                 created_at)
@@ -153,12 +155,15 @@ no zones table.
 | GET    | `/api/unit`                  | Unit info                                              |
 | GET    | `/api/chores`                | All chores, including OK ones (Setup page)             |
 | POST   | `/api/chores`                | Add a chore: give a `code`, or a `zone` + `category` to get the next free code |
-| PATCH  | `/api/chores/{code}`         | Edit name / interval / zone                            |
+| PATCH  | `/api/chores/{code}`         | Edit name, interval, last done, notes, help (`how_to`, `done_when`) |
 | DELETE | `/api/chores/{code}`         | Remove a chore                                         |
 | GET/PUT| `/api/settings`              | Theme, unit ID                                         |
 | GET    | `/api/meta`                  | Zones, categories and themes (feeds the Setup page's menus) |
 
 ## Seed chores (18, matching the prototype's "Tasks tracked 18")
+
+Used for a fresh database and by the tests. On the Pi this demo list was replaced on
+2026-10-26 by the real list of 48 chores (each with help text) chosen in the Phase 2 worksheet.
 
 Codes marked ★ come straight from the prototype.
 
@@ -249,12 +254,31 @@ Useful commands: `systemctl status homeobd`, `journalctl -u homeobd -f`,
 To restore: `systemctl stop homeobd`, copy a backup over `data/homeobd.db` (and delete
 `data/homeobd.db-wal` and `-shm`), then `systemctl start homeobd`.
 
-### M4 — POC polish (optional)
-- PWA manifest and icon so it can be added to the phone home screen.
-- Completion history per code.
-- LAN notifications for new CONF/PERM codes (e.g. self-hosted `ntfy` on the Pi).
+### M4 — Real chores and help ✅
+- Chore help: `how_to` and `done_when` on every chore, shown under **Help** on the scanner and
+  edited on the Setup page. Older databases gain the columns on startup.
+- Chore list rebuilt from the worksheet picks: 48 chores, including one "check soil" chore per
+  plant (celosia, mini trailing plant, Chinese money plant, umbrella plant, palm, bird of
+  paradise) and a monthly plant care round. Demo last-done dates were reset to 2026-10-26.
+- Fix: editing a chore's last-done date closes its open freeze frame.
 
-## Phase 2 — IoT (later, design only for now)
+### M5 — Next app features (picked 2026-10-26)
+- Phone home-screen app (PWA manifest and icon).
+- Completion history per code.
+- Phone alerts for new overdue codes via ntfy, on the same topic as the homeserver.
+- Seasonal intervals (e.g. plants and fertilizing less often in winter).
+- Freeze frame "Set on" = the day the chore actually went overdue.
+- Maybe: sensor readings on Live data (waits for Phase 2).
+
+Decisions recorded: homeOBD stays on the Pi; no off-Pi copy of its backups; appliances are
+switched by hand (homeOBD raises the code); automation rules live in homeOBD, not Home
+Assistant; homeserver status stays out of homeOBD; plants run on schedules, not sensors.
+
+## Phase 2 — IoT (on hold)
+
+Picked but parked on 2026-10-26: ESP32 boards with ESPHome, outdoor air quality from
+Open-Meteo, SHT41 ×3, PMS5003, Senseair S8/SCD40, soil sensors, leak probes; routines R01-R06,
+R09, R10, R12, R13 from the worksheet.
 
 - **Message bus:** Mosquitto MQTT broker on the Pi (LAN only). Sensors publish to
   `homeobd/<zone>/<sensor>/<metric>`.
