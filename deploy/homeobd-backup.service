@@ -1,0 +1,12 @@
+# One nightly backup run; started by homeobd-backup.timer.
+[Unit]
+Description=homeOBD database backup
+
+[Service]
+Type=oneshot
+ExecStart=/root/homeOBD/deploy/backup.sh
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/root/homeOBD/backups /root/homeOBD/data
+PrivateTmp=yes

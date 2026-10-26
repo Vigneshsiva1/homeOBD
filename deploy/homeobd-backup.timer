@@ -1,0 +1,11 @@
+# Back up the database every night; if the Pi was off at 03:30, run soon after boot.
+[Unit]
+Description=Nightly homeOBD database backup
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

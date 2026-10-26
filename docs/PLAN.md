@@ -115,7 +115,7 @@ days), never stored, so they can't drift:
 **Network scope (LAN only)**
 
 - Bind to the Pi's LAN interface; reach it at `http://<hostname>.local:8000` (mDNS via
-  `avahi-daemon`) or the Pi's IP. Give the Pi a DHCP reservation on the router.
+  `avahi-daemon`, i.e. `http://photostorage.local:8000`) or the Pi's IP. Give the Pi a DHCP reservation on the router.
 - No port forwarding, TLS, public DNS or login for the POC: anyone on the home Wi-Fi can use it.
   Optional hardening: a firewall rule allowing port 8000 only from the local subnet.
 
@@ -226,11 +226,28 @@ Files: `app/static/index.html` + `scantool.js` + `scantool.css` (scanner, served
 scanner re-reads its data every 60 s and whenever the tab becomes visible again.
 
 ### M3 — Run it on the Pi for real
-- Set the Pi's time zone.
-- `deploy/homeobd.service` systemd unit (start on boot, restart on crash).
-- `avahi-daemon` so `http://<hostname>.local:8000` works; DHCP reservation on the router.
-- Nightly SQLite backup (`sqlite3 .backup` from a systemd timer, keep the last 14).
+- [ ] Set the Pi's time zone.
+- [x] `deploy/homeobd.service`: starts on boot, restarts 3 s after a crash. Runs as root
+  (the repo is in `/root`) with systemd sandboxing: everything read-only except `data/`.
+  Access log is off to keep the RAM journal quiet.
+- [x] `avahi-daemon` installed: the app is at `http://photostorage.local:8000`.
+- [ ] DHCP reservation for the Pi (`192.168.0.157`) on the router (do this in the router's admin page).
+- [x] Nightly backup: `deploy/backup.sh` via `homeobd-backup.timer` at 03:30 (or soon after boot
+  if the Pi was off). Uses SQLite's online `.backup`, checks integrity, keeps the newest 14
+  in `backups/` (not in git). Backups are on the same SD card; copying them off the Pi is a
+  later improvement.
 - **Done when:** the Pi reboots and the dashboard comes back on its own.
+
+Install or update after pulling changes:
+
+```bash
+sudo ./deploy/install.sh
+```
+
+Useful commands: `systemctl status homeobd`, `journalctl -u homeobd -f`,
+`systemctl list-timers homeobd-backup.timer`, `./deploy/backup.sh` (back up now).
+To restore: `systemctl stop homeobd`, copy a backup over `data/homeobd.db` (and delete
+`data/homeobd.db-wal` and `-shm`), then `systemctl start homeobd`.
 
 ### M4 — POC polish (optional)
 - PWA manifest and icon so it can be added to the phone home screen.

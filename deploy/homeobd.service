@@ -1,0 +1,29 @@
+# homeOBD web app. Installed by deploy/install.sh; edit here and re-run it.
+[Unit]
+Description=homeOBD apartment scan tool
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/homeOBD
+ExecStart=/root/homeOBD/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log
+Restart=on-failure
+RestartSec=3
+
+# The repo lives in /root, so the service runs as root; lock it down instead.
+# Everything is read-only except the database folder.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/root/homeOBD/data
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target
