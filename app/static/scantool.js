@@ -18,7 +18,6 @@ const BACK = {
 const DETAIL_ROWS = ['Mark done', 'Help'];
 const FULL = { PERM: 'Permanent', CONF: 'Confirmed', PEND: 'Pending' };
 const THEMES = ['classic', 'amber', 'green'];
-const MOVE_FOOT = '▲▼ move  ENTER view  EXIT back';
 const BOOT_TICK_MS = 140;
 const REFRESH_MS = 60000;
 
@@ -262,7 +261,8 @@ function textLines(text) {
 }
 
 function view() {
-  const v = { title: '', lines: [], pairs: [], rows: [], foot: 'EXIT back', bar: null };
+  // keys: on-screen soft keys [label, action]; null means a BACK key wherever EXIT goes somewhere.
+  const v = { title: '', lines: [], pairs: [], rows: [], foot: '', keys: null, bar: null };
   const kv = (k, val) => v.pairs.push([k, String(val)]);
   const reading = () => { v.lines = ['Reading...']; };
   const codeRows = key => data.codes.map((c, i) => ({
@@ -274,7 +274,7 @@ function view() {
       v.title = 'APT-OBD';
       if (s.bootError) {
         v.lines = ['Link failed.', 'Check the Pi is on.'];
-        v.foot = 'ENTER retry';
+        v.keys = [['RETRY', 'enter']];
         break;
       }
       v.lines = [
@@ -283,21 +283,20 @@ function view() {
         'Please wait  ' + s.progress + ' %',
       ];
       v.bar = s.progress;
-      v.foot = 'ENTER skip';
+      v.keys = [['SKIP', 'enter']];
       break;
     case 'menu':
       v.title = 'Diagnostic menu';
       v.rows = MENU.map(([name], i) => ({
         label: name, tag: i === 0 && data.codes.length ? String(data.codes.length) : '', sel: i === s.idx.menu, i,
       }));
-      v.foot = '▲▼ move  ENTER open';
+      v.foot = 'Tap to open';
       break;
     case 'codes':
       v.title = 'Read codes';
       if (!data.codes.length) v.lines = ['No codes found.', 'Apartment is healthy.'];
       else {
         v.rows = codeRows('codes');
-        v.foot = MOVE_FOOT;
       }
       break;
     case 'detail': {
@@ -314,7 +313,6 @@ function view() {
       kv('Interval', days(c.interval_days));
       kv('Last done', fmtDate(c.last_done));
       v.rows = DETAIL_ROWS.map((label, i) => ({ label, tag: '', sel: i === s.idx.detail, i }));
-      v.foot = '▲▼ move  ENTER select  EXIT back';
       break;
     }
     case 'manual':
@@ -324,7 +322,6 @@ function view() {
         v.rows = data.chores.map((c, i) => ({
           label: c.code + ' ' + c.name, tag: days(c.interval_days), sel: i === s.idx.manual, i,
         }));
-        v.foot = MOVE_FOOT;
       }
       break;
     case 'help': {
@@ -339,7 +336,6 @@ function view() {
         if (c.how_to) v.lines.push(SPACER);
         v.lines.push('DONE WHEN', ...textLines(c.done_when));
       }
-      v.foot = 'ENTER or EXIT back';
       break;
     }
     case 'confirm': {
@@ -348,13 +344,13 @@ function view() {
       v.lines = c && c.done_when
         ? ['Mark ' + s.sel + ' done?', SPACER, 'Done when:', ...textLines(c.done_when)]
         : ['Mark ' + s.sel + ' done?', 'Only if the chore', 'is really finished.'];
-      v.foot = 'ENTER yes  EXIT no';
+      v.keys = [['YES', 'enter'], ['NO', 'exit']];
       break;
     }
     case 'msg':
       v.title = s.msg.title;
       v.lines = s.msg.lines;
-      v.foot = 'ENTER continue';
+      v.keys = [['CONTINUE', 'enter']];
       break;
     case 'erase': {
       v.title = 'Erase codes';
@@ -367,7 +363,7 @@ function view() {
           'Erase ' + can + (can === 1 ? ' code?' : ' codes?'),
           'Erased codes return', 'in 24 h if the chores', 'are not done.', 'Permanent codes stay.',
         ];
-        v.foot = 'ENTER erase  EXIT cancel';
+        v.keys = [['ERASE', 'enter'], ['CANCEL', 'exit']];
       }
       break;
     }
@@ -390,7 +386,6 @@ function view() {
       if (!data.codes.length) v.lines = ['No frames stored.'];
       else {
         v.rows = codeRows('freezeList');
-        v.foot = MOVE_FOOT;
       }
       break;
     case 'freeze': {
@@ -459,7 +454,17 @@ function render() {
   $('screen').className = 'screen theme-' + data.theme;
   $('title').textContent = v.title;
   $('lamp').hidden = !data.lamp;
-  $('foot').textContent = v.foot;
+  const keys = v.keys ?? (BACK[s.screen] || s.screen === 'help' ? [['BACK', 'exit']] : []);
+  if (keys.length) {
+    $('foot').replaceChildren(...keys.map(([label, action]) => {
+      const b = el('button', 'softkey', label);
+      b.type = 'button';
+      b.addEventListener('click', action === 'enter' ? enter : exit);
+      return b;
+    }));
+  } else {
+    $('foot').textContent = v.foot;
+  }
 
   const nodes = v.lines.map(t => el('div', 'line', t));
   if (v.bar != null) {
@@ -489,10 +494,6 @@ function render() {
 
 // --- Wiring --------------------------------------------------------------------------------
 
-$('key-up').addEventListener('click', () => move(-1));
-$('key-down').addEventListener('click', () => move(1));
-$('key-enter').addEventListener('click', enter);
-$('key-exit').addEventListener('click', exit);
 
 document.addEventListener('keydown', e => {
   if (e.altKey || e.ctrlKey || e.metaKey) return;

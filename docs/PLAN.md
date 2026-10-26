@@ -13,8 +13,11 @@ The design reference is the prototype in [`prototype/`](../prototype/README.md);
 ## The scan-tool UI (from the prototype)
 
 A single device-shaped panel: header "APT-OBD · Maintenance scanner", a pixel-font screen
-with a title bar and a **CHK APT** warning lamp, a footer of key hints, and four buttons:
-**▲**, **▼**, **ENTER**, **EXIT**. Rows on the screen can also be tapped directly.
+with a title bar and a **CHK APT** warning lamp. The screen is touch-only (the prototype's
+▲/▼/ENTER/EXIT buttons were removed on 2026-10-26): tap a row to open it, and the footer
+shows on-screen soft keys such as **BACK**, **YES**/**NO**, **ERASE**/**CANCEL**, **CONTINUE**.
+The screen has a fixed height that fills the phone; long lists scroll inside it. Arrow keys,
+Enter and Escape still work on a computer.
 
 Screen colour themes: **classic** (blue on light grey), **amber** (amber on black),
 **green** (LCD green). Fonts: **Chakra Petch** 500/600 for the device body and **VT323** for
@@ -35,7 +38,7 @@ the screen.
 | Unit info     | Unit ID, software version, ECU (Raspberry Pi 4), interface (Web, Wi-Fi), zone and task counts. |
 | Help          | Every chore (due or not) with its interval; ENTER shows its steps and DONE WHEN. |
 
-Adding and editing chores needs text entry, which four buttons can't do well, so it goes on a
+Adding and editing chores needs text entry, which the scanner screen isn't built for, so it goes on a
 separate plain **Setup page** (`/setup`). The theme is also chosen there.
 
 ## Codes, zones and states

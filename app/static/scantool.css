@@ -1,5 +1,5 @@
 /* Scan-tool page. Measurements and colours follow prototype/template.html. */
-/* Quick repeated taps on the keys must not trigger iOS double-tap zoom; pinch zoom still works. */
+/* Quick repeated taps on the screen must not trigger iOS double-tap zoom; pinch zoom still works. */
 html { touch-action: manipulation; }
 body { margin: 0; background: #121315; }
 a { color: #f2a33a; }
@@ -11,7 +11,7 @@ main {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 24px 16px 40px;
+  padding: 24px 16px 24px;
   font-family: 'Chakra Petch', system-ui, sans-serif;
 }
 .device-wrap { width: 100%; max-width: 440px; display: flex; flex-direction: column; align-items: center; }
@@ -44,10 +44,16 @@ main {
   color: var(--ink);
   border-radius: 4px;
   font-family: 'VT323', ui-monospace, monospace;
-  min-height: 340px;
+  /* Fixed height so every screen is the same size; long lists scroll inside the body. Fills the
+     phone below the brand row (the rest of the page takes about 235px). */
+  height: clamp(320px, calc(100vh - 240px), 680px);
+  height: clamp(320px, calc(100dvh - 240px), 680px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none; /* no copy/lookup menu on long press */
 }
 .screen-head {
   background: var(--head-bg);
@@ -70,8 +76,45 @@ main {
   white-space: nowrap;
 }
 .lamp[hidden] { display: none; }
-.screen-body { flex: 1; padding: 8px 0; display: flex; flex-direction: column; gap: 2px; }
-.screen-foot { border-top: 2px solid var(--dim); padding: 3px 10px; font-size: 18px; line-height: 1.25; color: var(--dim); }
+.screen-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.screen-foot {
+  border-top: 2px solid var(--dim);
+  padding: 6px 10px;
+  min-height: 30px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 18px;
+  line-height: 1.25;
+  color: var(--dim);
+}
+/* On-screen soft keys, like a scan tool's labelled function keys. */
+.softkey {
+  appearance: none;
+  flex: 1;
+  min-height: 40px;
+  margin: 0;
+  border: 2px solid var(--ink);
+  border-radius: 3px;
+  background: var(--sel-bg);
+  color: var(--sel-ink);
+  font-family: 'VT323', ui-monospace, monospace;
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.softkey + .softkey { background: transparent; color: var(--ink); }
+.softkey:active { filter: brightness(1.15); }
 
 .clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .line { padding: 0 10px; font-size: 22px; line-height: 1.2; }
@@ -86,7 +129,8 @@ main {
   border: 0;
   margin: 0;
   width: 100%;
-  min-height: 32px;
+  min-height: 40px;
+  flex-shrink: 0;
   padding: 2px 10px;
   display: flex;
   justify-content: space-between;
@@ -104,27 +148,5 @@ main {
   user-select: none;
 }
 .row.sel { background: var(--sel-bg); color: var(--sel-ink); }
-
-.keys { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.key {
-  height: 64px;
-  border-radius: 16px;
-  border: 1px solid #3a3d43;
-  background: #2c2e33;
-  font-family: 'Chakra Petch', system-ui, sans-serif;
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none; /* no copy/lookup menu on long press */
-}
-.key:active { filter: brightness(1.2); }
-.key-arrow { display: flex; align-items: center; justify-content: center; }
-.key-arrow svg { fill: none; stroke: #f2a33a; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-.key-enter { border-color: #f2a33a; background: #f2a33a; color: #1a1206; }
-.key-exit { color: #f2f0ea; }
 
 .setup-link { margin-top: 18px; font-size: 14px; letter-spacing: 0.08em; }
