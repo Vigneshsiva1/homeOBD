@@ -16,7 +16,7 @@ window.addEventListener('resize', fitScreen);
 // the panel, and long screens turn page by page with buttons instead of scrolling (see turnPage).
 const PANEL = new URLSearchParams(location.search).has('panel');
 if (PANEL) document.documentElement.classList.add('panel');
-// ?dim=60 darkens the panel's colours to 60 % (its backlight can't be dimmed); see dimColours.
+// ?dim=75 darkens the panel's colours to 75 % (its backlight can't be dimmed); see dimColours.
 const PANEL_DIM = PANEL ? Number(new URLSearchParams(location.search).get('dim')) : 0;
 window.addEventListener('orientationchange', fitScreen);
 
@@ -268,14 +268,18 @@ async function busy(fn) {
 }
 
 function boot() {
-  Object.assign(s, { screen: 'boot', progress: 0, booted: false, bootError: false, skip: false });
-  render();
-  const timer = setInterval(() => {
+  // The panel skips the progress bar (each step is a full redraw over SPI) and draws nothing
+  // until the menu is ready; deploy/panel-power.py shows its own splash meanwhile.
+  Object.assign(s, { screen: 'boot', progress: 0, booted: false, bootError: false, skip: PANEL });
+  if (!PANEL) render();
+  const timer = PANEL ? null : setInterval(() => {
     s.progress = Math.min(100, s.progress + 10);
     if (s.progress >= 100) clearInterval(timer);
     finishBoot();
   }, BOOT_TICK_MS);
-  Promise.all([api('/settings'), api('/unit'), loadCodes()])
+  // The panel also waits for the screen font, so the menu isn't drawn a second time when it arrives.
+  const font = PANEL ? document.fonts.load("20px 'VT323'").catch(() => {}) : null;
+  Promise.all([api('/settings'), api('/unit'), loadCodes(), font])
     .then(([settings, unit]) => {
       data.theme = THEMES.includes(settings.theme) ? settings.theme : 'classic';
       data.unit = unit;

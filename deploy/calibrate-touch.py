@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Calibrate the 3.5" panel's touch against crosshairs drawn on the panel.
 
-Run as root on the Pi: it stops the kiosk, draws five crosshairs one at a time, and you tap
+Run as root on the Pi: it stops the panel's interface, draws five crosshairs one at a time, and you tap
 the centre of each with a fingertip (or better, a stylus or fingernail). It fits a libinput
 calibration matrix to the taps and prints how far off each tap would land. With --write it
-saves the matrix in deploy/99-homeobd-panel.rules and applies it. The kiosk restarts at the
+saves the matrix in deploy/99-homeobd-panel.rules and applies it. The panel restarts at the
 end either way. See docs/PANEL.md.
 """
 import fcntl
@@ -105,7 +105,8 @@ def fit(taps, goals):
 
 
 def main():
-    subprocess.run(['systemctl', 'stop', 'homeobd-kiosk'], check=False)
+    # The power daemon would start the browser on the first tap, and X would draw over us.
+    subprocess.run(['systemctl', 'stop', 'homeobd-panel-power', 'homeobd-kiosk'], check=False)
     try:
         screen = Screen()
         screen.fill(WHITE)
@@ -137,7 +138,7 @@ def main():
             subprocess.run(['udevadm', 'settle'], check=True)
             print(f'Saved in {RULE} and applied.')
     finally:
-        subprocess.run(['systemctl', 'start', 'homeobd-kiosk'], check=False)
+        subprocess.run(['systemctl', 'start', 'homeobd-kiosk', 'homeobd-panel-power'], check=False)
 
 
 if __name__ == '__main__':

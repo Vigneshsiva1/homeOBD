@@ -1,8 +1,9 @@
-# Shows the scan tool full screen on the Pi's 3.5" SPI touch panel (ILI9486 + XPT2046).
+# X and the window manager on the Pi's 3.5" SPI touch panel (ILI9486 + XPT2046). The scan
+# tool itself is homeobd-panel-ui.service, run on demand by homeobd-panel-power.service.
 # Installed by deploy/install-kiosk.sh; edit here and re-run it. Needs the panel overlay in
 # /boot/firmware/config.txt (see docs/PANEL.md).
 [Unit]
-Description=homeOBD kiosk on the 3.5in touch panel
+Description=homeOBD X display on the 3.5in touch panel
 Wants=homeobd.service
 After=homeobd.service systemd-user-sessions.service
 ConditionPathExists=/dev/fb-panel

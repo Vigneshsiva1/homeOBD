@@ -1,0 +1,20 @@
+# The scan tool in a browser on the Pi's 3.5" panel. Not enabled on its own:
+# homeobd-panel-power.service (deploy/panel-power.py) starts it on a touch or a new code and
+# stops it when idle. Installed by deploy/install-kiosk.sh; edit here and re-run it.
+[Unit]
+Description=homeOBD scan tool on the 3.5in panel (browser)
+Requires=homeobd-kiosk.service
+After=homeobd-kiosk.service homeobd.service
+
+[Service]
+Type=simple
+User=kiosk
+Environment=DISPLAY=:0 HOME=/home/kiosk
+# Software rendering only: the panel's framebuffer has no GPU behind it.
+Environment=WEBKIT_DISABLE_COMPOSITING_MODE=1
+# dim=75: picture brightness in percent. The backlight itself is always fully on, so this
+# darkens the colours instead; 100 = as on the phone.
+ExecStart=/usr/bin/surf -F "http://127.0.0.1:8000/?panel&dim=75"
+# Restarts if surf starts before X accepts connections.
+Restart=on-failure
+RestartSec=1

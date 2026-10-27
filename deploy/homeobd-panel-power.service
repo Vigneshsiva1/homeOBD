@@ -1,0 +1,17 @@
+# Turns the 3.5" panel's interface on when it is touched or a code is set, and off when idle
+# (deploy/panel-power.py). Installed by deploy/install-kiosk.sh; edit here and re-run it.
+[Unit]
+Description=homeOBD 3.5in panel on/off (touch and new codes)
+Wants=homeobd-kiosk.service
+After=homeobd-kiosk.service homeobd.service
+ConditionPathExists=/dev/fb-panel
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /root/homeOBD/deploy/panel-power.py
+ExecStopPost=/bin/systemctl stop homeobd-panel-ui.service
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target

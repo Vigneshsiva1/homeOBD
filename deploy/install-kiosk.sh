@@ -26,6 +26,8 @@ if ! grep -qx "$OVERLAY" "$CONFIG"; then
 fi
 
 id kiosk >/dev/null 2>&1 || useradd --system --create-home --shell /usr/sbin/nologin kiosk
+install -d -o kiosk -g kiosk /home/kiosk/.config /home/kiosk/.config/gtk-3.0
+install -m 644 -o kiosk -g kiosk "$ROOT/deploy/kiosk-gtk.css" /home/kiosk/.config/gtk-3.0/gtk.css
 
 install -m 644 "$ROOT/deploy/99-homeobd-panel.rules" /etc/udev/rules.d/
 udevadm control --reload
@@ -33,9 +35,13 @@ udevadm trigger --subsystem-match=graphics --subsystem-match=input
 udevadm settle
 
 install -m 644 "$ROOT/deploy/xorg-panel.conf" /etc/X11/homeobd-panel.conf
-install -m 644 "$ROOT/deploy/homeobd-kiosk.service" /etc/systemd/system/
+# X (homeobd-kiosk) stays up; the browser (homeobd-panel-ui) is started on a touch or a new
+# code and stopped when idle by homeobd-panel-power, so only that one and X are enabled.
+for unit in homeobd-kiosk homeobd-panel-ui homeobd-panel-power; do
+    install -m 644 "$ROOT/deploy/$unit.service" /etc/systemd/system/
+done
 systemctl daemon-reload
-systemctl enable homeobd-kiosk.service
-systemctl restart homeobd-kiosk.service || true
+systemctl enable homeobd-kiosk.service homeobd-panel-power.service
+systemctl restart homeobd-kiosk.service homeobd-panel-power.service || true
 
-systemctl --no-pager --lines=0 status homeobd-kiosk.service || true
+systemctl --no-pager --lines=0 status homeobd-kiosk.service homeobd-panel-power.service || true

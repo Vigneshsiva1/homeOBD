@@ -27,7 +27,9 @@ piece of work.
   (`.panel` styles at the end of `scantool.css`). Check changes there too; each full redraw
   takes about 0.33 s over SPI, so avoid animations and needless redraws. On the panel only,
   long screens turn page by page with ▲ / ▼ footer buttons instead of scrolling (set by the
-  user, 2026-10-26); the webpage keeps scrolling and must stay as it is.
+  user, 2026-10-26); the webpage keeps scrolling and must stay as it is. The panel is black
+  with the browser stopped until it is tapped or a code is set, and goes black again when
+  idle (`deploy/panel-power.py`, set by the user, 2026-10-27); the backend always runs.
 - The scanner fills the whole phone screen. Every screen is the same size; long content
   scrolls inside the screen, never the page.
 - Full height comes from `fitScreen()` in `scantool.js` setting `--app-height` on `<html>`:

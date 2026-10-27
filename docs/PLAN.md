@@ -300,7 +300,8 @@ To restore: `systemctl stop homeobd`, copy a backup over `data/homeobd.db` (and 
 - Pi touch panel (2026-10-26): the scan tool also shows full screen on a 3.5" SPI display
   (ILI9486 + XPT2046) on the Pi itself, in addition to the website. Xorg on the fbtft
   framebuffer + `surf` open `/?panel` (scanner screen only, no device body or Setup link);
-  see [PANEL.md](PANEL.md).
+  see [PANEL.md](PANEL.md). Since 2026-10-27 the browser only runs while the panel is on: a
+  tap or a new / worse code turns it on, and it goes black after a minute idle.
 
 Decisions recorded: homeOBD stays on the Pi; no off-Pi copy of its backups; appliances are
 switched by hand (homeOBD raises the code); automation rules live in homeOBD, not Home
