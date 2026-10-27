@@ -5,11 +5,13 @@ The browser (homeobd-panel-ui.service) only runs while the panel is on: a tap tu
 until nobody has touched it for IDLE_OFF seconds, and a newly set code (or one that gets
 worse, PEND -> CONF -> PERM) turns it on for CODE_WAKE seconds. Codes set during the quiet
 hours wait until they end, so the daily codes set at midnight light the panel in the morning.
-Off, the panel is drawn black: its backlight is wired always-on and can't be switched.
+The scan tool's SCREEN OFF button turns it off at once (a POST to OFF_ADDR, which only
+listens locally). Off, the panel is drawn black: its backlight is wired always-on and can't be switched.
 
 Runs as root from homeobd-panel-power.service. See docs/PANEL.md.
 """
 import glob
+import http.server
 import json
 import mmap
 import os
@@ -26,6 +28,7 @@ QUIET = (22, 8)  # hours: code wakes from 22:00 wait until 08:00
 POLL = 60  # seconds between code checks
 UI = 'homeobd-panel-ui.service'
 CODES_URL = 'http://127.0.0.1:8000/api/codes'
+OFF_ADDR = ('127.0.0.1', 8001)  # POST /off here turns the panel off (scantool.js panelOff)
 STATE_RANK = {'PERM': 0, 'CONF': 1, 'PEND': 2}  # as in app/engine.py: lower is worse
 EV_KEY, BTN_TOUCH = 0x01, 0x14A
 EVENT = struct.Struct('llHHi')  # struct input_event
@@ -74,6 +77,21 @@ class Panel:
         self.text(self.h // 2 + 20, 'LINKING...', scale=3)
 
 
+class OffRequest(http.server.BaseHTTPRequestHandler):
+    timeout = 2  # seconds; a stalled client can't hold up the touch loop
+
+    def do_POST(self):
+        self.server.off = self.path == '/off'
+        self.send_response(204)
+        # The scan tool is on another port (another origin); without this its fetch fails,
+        # although the request has already arrived.
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+
+    def log_message(self, *args):
+        pass
+
+
 def touch_device():
     for path in sorted(glob.glob('/sys/class/input/event*/device/name')):
         if open(path).read().strip() == 'ADS7846 Touchscreen':
@@ -101,6 +119,8 @@ def systemctl(*args):
 
 def main():
     panel, touch = Panel(), touch_device()
+    server = http.server.HTTPServer(OFF_ADDR, OffRequest)
+    server.off = False
     on_until = 0.0
     seen = read_codes() or {}
     pending = False  # a code wake held back by the quiet hours
@@ -117,9 +137,14 @@ def main():
     systemctl('stop', UI)
     turn_on(CODE_WAKE)  # show it once at boot, so it is clear the panel works
     while True:
-        ready, _, _ = select.select([touch], [], [], 1)
+        ready, _, _ = select.select([touch, server], [], [], 1)
         now = time.monotonic()
-        if ready:
+        if server in ready:
+            server.handle_request()
+            if server.off and on_until:
+                on_until = now
+            server.off = False
+        if touch in ready:
             data = touch.read(EVENT.size * 64)
             for i in range(0, len(data) - EVENT.size + 1, EVENT.size):
                 _, _, etype, code, value = EVENT.unpack_from(data, i)

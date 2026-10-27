@@ -23,7 +23,8 @@ the goodtft / LCDwiki MPI3501 type (Waveshare 3.5" (A) clones have the same wiri
    surf (WebKitGTK browser, user kiosk) ──► http://127.0.0.1:8000/?panel
 
  systemd: homeobd-panel-power.service ── deploy/panel-power.py (root)
-   reads the touchscreen and /api/codes; starts and stops homeobd-panel-ui;
+   reads the touchscreen, /api/codes and SCREEN OFF (127.0.0.1:8001); starts and stops
+   homeobd-panel-ui;
    draws black / the splash straight into /dev/fb-panel
 ```
 
@@ -49,7 +50,10 @@ change; only the panel's own interface starts and stops.
 - **A new code, or a code that gets worse** (PEND -> CONF -> PERM), turns it on for 30 s,
   checked once a minute. Codes set between 22:00 and 08:00 wait until 08:00, so the daily
   codes set at midnight don't light the room at night.
-- **Off** after 60 s without a tap: the browser stops and the panel is drawn black.
+- **Off** after 60 s without a tap (or 30 s after a code woke it, if nobody taps): the browser
+  stops and the panel is drawn black.
+- **SCREEN OFF** in the menu's footer (panel only) turns it off at once. The page POSTs to
+  `http://127.0.0.1:8001/off`, which `panel-power.py` listens on, on the Pi itself only.
 - It also comes on for 30 s when the service starts (boot), to show the panel works.
 
 Off, the kiosk uses about 60 MB (X ~30, matchbox ~7, the daemon ~22) instead of about 560 MB.

@@ -475,6 +475,7 @@ function view() {
         label: name, tag: i === 0 && data.codes.length ? String(data.codes.length) : '', sel: i === s.idx.menu, i,
       }));
       v.foot = 'Tap to open';
+      if (PANEL) v.keys = [['SCREEN OFF', 'off']];
       break;
     case 'codes':
       v.title = 'Read codes';
@@ -660,7 +661,7 @@ function render() {
   const foot = v.keys.map(([label, action]) => {
     const b = el('button', 'softkey', label);
     b.type = 'button';
-    b.addEventListener('click', action === 'enter' ? enter : exit);
+    b.addEventListener('click', { enter, exit, off: panelOff }[action]);
     return b;
   });
   if (PANEL) {
@@ -714,6 +715,11 @@ function render() {
   } else if (sel) {
     sel.scrollIntoView({ block: 'nearest' });
   }
+}
+
+// Turn the panel off now: deploy/panel-power.py listens for this on the Pi itself only.
+function panelOff() {
+  fetch('http://127.0.0.1:8001/off', { method: 'POST' }).catch(() => {});
 }
 
 // Darken the theme's colours on the panel. A CSS filter would be simpler, but it costs the

@@ -3,7 +3,7 @@
 // /api/ requests are never cached: the scanner must always show live data.
 'use strict';
 
-const CACHE = 'apt-obd-v14'; // bump to drop every cached copy on the next visit
+const CACHE = 'apt-obd-v15'; // bump to drop every cached copy on the next visit
 const SHELL = [
   '/',
   '/setup',
